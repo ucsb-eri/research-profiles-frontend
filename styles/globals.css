@@ -1,0 +1,115 @@
+/* UCSB Color Palette */
+:root {
+  --ucsb-navy: #003660;
+  --ucsb-gold: #ffb500;
+  --ucsb-aqua: #007396;
+  --ucsb-moss: #6e7b41;
+  --ucsb-sea-green: #009ca6;
+  --ucsb-coral: #e87722;
+  --ucsb-mist: #a9c4cb;
+  --ucsb-clay: #d7d2cb;
+  --ucsb-sandstone: #bfa980;
+  --ucsb-light-gray: #d0d3d4;
+  --ucsb-white: #ffffff;
+  --ucsb-black: #000000;
+  --ucsb-body-text: #3d4952;
+}
+
+body {
+  color: var(--ucsb-body-text);
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 16px;
+  background: var(--ucsb-white);
+  margin: 0;
+  line-height: 1.6;
+}
+
+h1 {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  letter-spacing: -0.1pt;
+  color: var(--ucsb-navy);
+}
+h2 {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 800;
+  font-size: 27px;
+  letter-spacing: -0.1pt;
+  color: var(--ucsb-navy);
+}
+h3 {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  color: var(--ucsb-navy);
+}
+h4 {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ucsb-navy);
+}
+h5 {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ucsb-navy);
+}
+h6 {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--ucsb-navy);
+}
+
+a {
+  color: var(--ucsb-navy);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: var(--ucsb-gold);
+}
+
+button,
+input[type="submit"] {
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 700;
+  background: var(--ucsb-navy);
+  color: var(--ucsb-white);
+  border: none;
+  border-radius: 4px;
+  padding: 0.6em 1.2em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover,
+input[type="submit"]:hover {
+  background: var(--ucsb-gold);
+  color: var(--ucsb-navy);
+}
+
+.bg-navy { background: var(--ucsb-navy); color: var(--ucsb-white); }
+.bg-gold { background: var(--ucsb-gold); color: var(--ucsb-navy); }
+.bg-light { background: var(--ucsb-light-gray); }
+
+.grid {
+  display: grid;
+  gap: 2rem;
+}
+.grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 900px) {
+  .grid-cols-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+} 
