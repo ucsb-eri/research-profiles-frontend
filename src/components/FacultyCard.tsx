@@ -52,7 +52,7 @@ export default function FacultyCard({ faculty }: { faculty: Faculty }) {
           alt={faculty.name}
           style={{
             width: '100%',
-            height: 220,
+            height: 280,
             objectFit: 'cover',
             borderTopLeftRadius: 12,
             borderTopRightRadius: 12,
@@ -72,7 +72,7 @@ export default function FacultyCard({ faculty }: { faculty: Faculty }) {
         style={{
           display: faculty.image ? 'none' : 'flex',
           width: '100%',
-          height: 220,
+          height: 280,
           background: 'linear-gradient(135deg, var(--ucsb-aqua) 0%, var(--ucsb-navy) 100%)',
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,

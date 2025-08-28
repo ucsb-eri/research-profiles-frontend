@@ -11,6 +11,7 @@ export default function FacultySearchBar({ onSearch, isLoading = false }: Search
     name: '',
     department: ''
   });
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,17 +22,32 @@ export default function FacultySearchBar({ onSearch, isLoading = false }: Search
     if (searchParams.name.trim()) params.name = searchParams.name.trim();
     if (searchParams.department.trim()) params.department = searchParams.department.trim();
     
+    setHasSearched(true);
     onSearch(params);
   };
 
   const handleClear = () => {
     setSearchParams({ topic: '', name: '', department: '' });
+    setHasSearched(false);
     onSearch({}); // Reset to show all faculty
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const formEvent = { preventDefault: () => {} } as React.FormEvent;
+      handleSubmit(formEvent);
+    }
+    if (e.key === 'Escape') {
+      handleClear();
+    }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={handleKeyDown}
       style={{
         width: '100%',
         marginBottom: 0,
@@ -160,17 +176,33 @@ export default function FacultySearchBar({ onSearch, isLoading = false }: Search
           >
             <option value="">All Departments</option>
             <option value="Black Studies">Black Studies</option>
-            <option value="History">History</option>
-            <option value="Sociology">Sociology</option>
-            <option value="Political Science">Political Science</option>
-            <option value="Anthropology">Anthropology</option>
-            <option value="English">English</option>
-            <option value="Psychology">Psychology</option>
+            <option value="Earth Science">Earth Science</option>
+            <option value="Ecology, Evolution, and Marine Biology">Ecology, Evolution, and Marine Biology</option>
             <option value="Economics">Economics</option>
+            <option value="Geography">Geography</option>
+            <option value="Marine Science Graduate Program">Marine Science Graduate Program</option>
+            <option value="Physics">Physics</option>
+            <option value="Electrical and Computer Engineering">Electrical and Computer Engineering</option>
+            <option value="Anthropology">Anthropology</option>
+            <option value="Asian American Studies">Asian American Studies</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="English">English</option>
           </select>
 
         </div>
       </div>
+      
+      {/* Search tips */}
+      {!hasSearched && (
+        <div style={{
+          fontSize: 14,
+          color: '#666',
+          marginBottom: 16,
+          fontStyle: 'italic',
+        }}>
+          💡 Search tips: Try searching by research topic, faculty name, or department. You can combine multiple criteria for more specific results.
+        </div>
+      )}
       
       {/* Search buttons */}
       <div style={{

@@ -13,7 +13,7 @@ interface FacultyDetail {
   office?: string;
   website?: string;
   photo_url?: string;
-  research_areas?: string;
+  research_areas?: string[]; // Now an array instead of string
   department: string;
   profile_url?: string;
 }
@@ -37,15 +37,10 @@ export default function FacultyDetailPage() {
     }
   }, [id]);
 
-  // Parse research areas from PostgreSQL array format
-  const parseResearchAreas = (researchAreas: string | null): string[] => {
-    if (!researchAreas) return [];
-    
-    return researchAreas
-      .replace(/[{}]/g, '')
-      .split(',')
-      .map(area => area.trim())
-      .filter(area => area.length > 0);
+  // Get research areas (now already an array)
+  const getResearchAreas = (researchAreas: string[] | null | undefined): string[] => {
+    if (!researchAreas || !Array.isArray(researchAreas)) return [];
+    return researchAreas.filter(area => area && area.trim().length > 0);
   };
 
   if (loading) {
@@ -81,7 +76,7 @@ export default function FacultyDetailPage() {
     );
   }
 
-  const researchAreas = parseResearchAreas(faculty.research_areas);
+  const researchAreas = getResearchAreas(faculty.research_areas);
   
   // Function to get the best quality image URL
   const getBestImageUrl = (photoUrl: string | null | undefined): string => {
@@ -265,64 +260,76 @@ export default function FacultyDetailPage() {
               )}
             </div>
 
-            {/* Research Bio */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{
-                fontSize: '32px',
-                fontWeight: 800,
-                color: 'var(--ucsb-navy)',
-                marginBottom: '1rem',
-                fontFamily: 'Nunito Sans, sans-serif',
-              }}>
-                Research Bio
-              </h2>
-              <div style={{
-                fontSize: '18px',
-                lineHeight: 1.6,
-                color: 'var(--ucsb-body-text)',
-                fontFamily: 'Nunito Sans, sans-serif',
-              }}>
-                {faculty.specialization || 
-                  `${faculty.name} is a faculty member in the ${faculty.department} department at UCSB. ` +
-                  `Their research focuses on ${researchAreas.length > 0 ? researchAreas.slice(0, 3).join(', ') : 'various areas of study'}.`
-                }
-              </div>
-            </div>
-
-            {/* Research Areas */}
-            {researchAreas.length > 0 && (
-              <div>
-                <h3 style={{
-                  fontSize: '24px',
-                  fontWeight: 700,
+            {/* Research Specialties */}
+            {(faculty.specialization || researchAreas.length > 0) && (
+              <div style={{ marginBottom: '2rem' }}>
+                <h2 style={{
+                  fontSize: '32px',
+                  fontWeight: 800,
                   color: 'var(--ucsb-navy)',
                   marginBottom: '1rem',
                   fontFamily: 'Nunito Sans, sans-serif',
                 }}>
-                  Research Areas
-                </h3>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}>
-                  {researchAreas.map((area, index) => (
-                    <span
-                      key={index}
-                      style={{
-                        background: 'var(--ucsb-aqua)',
-                        color: 'white',
-                        padding: '0.5rem 1rem',
-                        borderRadius: '20px',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        fontFamily: 'Nunito Sans, sans-serif',
-                      }}
-                    >
-                      {area}
-                    </span>
-                  ))}
-                </div>
+                  Research Specialties
+                </h2>
+                
+                {/* Detailed specialization text */}
+                {faculty.specialization && (
+                  <div style={{
+                    fontSize: '18px',
+                    lineHeight: 1.6,
+                    color: 'var(--ucsb-body-text)',
+                    marginBottom: researchAreas.length > 0 ? '1.5rem' : '0',
+                    fontFamily: 'Nunito Sans, sans-serif',
+                    padding: '1rem',
+                    background: '#f8f9ff',
+                    borderRadius: '8px',
+                    border: '1px solid #e1e5e9',
+                  }}>
+                    {faculty.specialization}
+                  </div>
+                )}
+                
+                {/* Research areas as tags */}
+                {researchAreas.length > 0 && (
+                  <div>
+                    <h3 style={{
+                      fontSize: '24px',
+                      fontWeight: 700,
+                      color: 'var(--ucsb-navy)',
+                      marginBottom: '1rem',
+                      fontFamily: 'Nunito Sans, sans-serif',
+                    }}>
+                      Key Research Areas
+                    </h3>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                    }}>
+                      {researchAreas.map((area, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            background: 'var(--ucsb-aqua)',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '20px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            fontFamily: 'Nunito Sans, sans-serif',
+                            transition: 'transform 0.2s ease',
+                            cursor: 'default',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -367,6 +374,75 @@ export default function FacultyDetailPage() {
                 {faculty.department}
               </div>
             </div>
+
+            {/* Research Specialties Summary */}
+            {(faculty.specialization || researchAreas.length > 0) && (
+              <div style={{ marginBottom: '2rem' }}>
+                <h3 style={{
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  color: 'var(--ucsb-navy)',
+                  marginBottom: '1rem',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                }}>
+                  Research Specialties
+                </h3>
+                
+                {/* Brief specialization preview */}
+                {faculty.specialization && (
+                  <div style={{
+                    fontSize: '14px',
+                    lineHeight: 1.5,
+                    color: 'var(--ucsb-body-text)',
+                    marginBottom: researchAreas.length > 0 ? '1rem' : '0',
+                    fontFamily: 'Nunito Sans, sans-serif',
+                    fontStyle: 'italic',
+                  }}>
+                    {faculty.specialization.length > 120 
+                      ? `${faculty.specialization.substring(0, 120)}...` 
+                      : faculty.specialization
+                    }
+                  </div>
+                )}
+                
+                {/* Top research areas */}
+                {researchAreas.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.25rem',
+                  }}>
+                    {researchAreas.slice(0, 4).map((area, index) => (
+                      <span
+                        key={index}
+                        style={{
+                          background: 'var(--ucsb-aqua)',
+                          color: 'white',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          fontFamily: 'Nunito Sans, sans-serif',
+                        }}
+                      >
+                        {area}
+                      </span>
+                    ))}
+                    {researchAreas.length > 4 && (
+                      <span style={{
+                        color: 'var(--ucsb-aqua)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        fontFamily: 'Nunito Sans, sans-serif',
+                        alignSelf: 'center',
+                      }}>
+                        +{researchAreas.length - 4} more
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Contact information */}
             <div style={{ marginBottom: '2rem' }}>

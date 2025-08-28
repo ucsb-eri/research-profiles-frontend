@@ -14,7 +14,7 @@ interface BackendFaculty {
   office?: string;
   website?: string;
   photo_url?: string;
-  research_areas?: string;
+  research_areas?: string[]; // Now an array instead of string
   department: string;
   profile_url?: string;
 }
@@ -23,6 +23,7 @@ export default function HomePage() {
   const [faculty, setFaculty] = useState<BackendFaculty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastSearchParams, setLastSearchParams] = useState<{ department?: string; topic?: string; name?: string }>({});
 
   useEffect(() => {
     console.log('Initial faculty fetch - this should only run once');
@@ -43,6 +44,7 @@ export default function HomePage() {
     console.log('Search triggered with params:', params);
     setLoading(true);
     setError(null);
+    setLastSearchParams(params);
     try {
       const results = await fetchFaculty(params);
       console.log('Search results:', results.length, 'faculty members');
@@ -115,6 +117,14 @@ export default function HomePage() {
                 fontWeight: 500
               }}>
                 Found {faculty.length} faculty member{faculty.length !== 1 ? 's' : ''}
+                {Object.values(lastSearchParams).some(val => val && val.trim()) && (
+                  <span style={{ fontSize: 16, fontWeight: 400, color: '#666', marginLeft: 8 }}>
+                    {Object.entries(lastSearchParams)
+                      .filter(([_, value]) => value && value.trim())
+                      .map(([key, value]) => `${key}: "${value}"`)
+                      .join(', ')}
+                  </span>
+                )}
               </div>
             </>
           )}
@@ -129,19 +139,13 @@ export default function HomePage() {
               }}
             >
               {faculty.map((f) => {
-                // Parse PostgreSQL array format: {"item1","item2","item3"} -> ["item1", "item2", "item3"]
-                const parseResearchAreas = (researchAreas: string | null): string[] => {
-                  if (!researchAreas) return [];
-                  
-                  // Remove curly braces and split by comma, then trim whitespace
-                  return researchAreas
-                    .replace(/[{}]/g, '') // Remove curly braces
-                    .split(',') // Split by comma
-                    .map(area => area.trim()) // Trim whitespace from each item
-                    .filter(area => area.length > 0); // Remove empty strings
+                // Get research areas (now already an array)
+                const getResearchAreas = (researchAreas: string[] | null | undefined): string[] => {
+                  if (!researchAreas || !Array.isArray(researchAreas)) return [];
+                  return researchAreas.filter(area => area && area.trim().length > 0);
                 };
                 
-                const cleanKeywords = parseResearchAreas(f.research_areas || null);
+                const cleanKeywords = getResearchAreas(f.research_areas);
                 
                 // Log missing photos for debugging
                 if (!f.photo_url) {
