@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api/faculty'; // Your backend URL
+const API_BASE = 'https://api.research-profiles.grit.ucsb.edu/api/faculty'; // Your backend URL
 
 export async function fetchFaculty(params: { department?: string; topic?: string; name?: string } = {}) {
   try {
@@ -28,6 +28,7 @@ export async function fetchFaculty(params: { department?: string; topic?: string
         const results = await res.json();
         
         // Filter by name on the client side
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
         const filteredResults = results.filter((faculty: any) => 
           faculty.name.toLowerCase().includes(params.name!.toLowerCase())
         );
@@ -44,6 +45,7 @@ export async function fetchFaculty(params: { department?: string; topic?: string
         const results = await res.json();
         
         // Filter by name on the client side
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
         const filteredResults = results.filter((faculty: any) => 
           faculty.name.toLowerCase().includes(params.name!.toLowerCase())
         );
