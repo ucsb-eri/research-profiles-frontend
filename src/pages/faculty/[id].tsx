@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { fetchFacultyById } from '../../lib/api';
+import { fetchFacultyById, fetchFacultySummaryTextById, fetchFacultyKeywordsById, fetchFacultyBroadKeywordsById } from '../../lib/api';
 import Link from 'next/link';
 
 interface FacultyDetail {
@@ -26,6 +26,11 @@ export default function FacultyDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [broadKeywords, setBroadKeywords] = useState<string[]>([]);
+  const [keywordsLoading, setKeywordsLoading] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === 'string') {
@@ -34,6 +39,50 @@ export default function FacultyDetailPage() {
         .then(setFaculty)
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false));
+    }
+  }, [id]);
+
+  // Fetch AI-generated summary, keywords, and broad keywords
+  useEffect(() => {
+    if (id && typeof id === 'string') {
+      const facultyId = parseInt(id);
+      
+      // Fetch summary
+      setSummaryLoading(true);
+      fetchFacultySummaryTextById(facultyId)
+        .then((data) => {
+          if (data && data.summary) {
+            setSummary(data.summary);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch summary:', err);
+          setSummary(null);
+        })
+        .finally(() => {
+          setSummaryLoading(false);
+        });
+      
+      // Fetch keywords and broad keywords
+      setKeywordsLoading(true);
+      Promise.all([
+        fetchFacultyKeywordsById(facultyId).catch(() => ({ keywords: [] })),
+        fetchFacultyBroadKeywordsById(facultyId).catch(() => ({ broad_keywords: [] }))
+      ])
+        .then(([keywordsData, broadKeywordsData]) => {
+          if (keywordsData && keywordsData.keywords) {
+            setKeywords(keywordsData.keywords);
+          }
+          if (broadKeywordsData && broadKeywordsData.broad_keywords) {
+            setBroadKeywords(broadKeywordsData.broad_keywords);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch keywords:', err);
+        })
+        .finally(() => {
+          setKeywordsLoading(false);
+        });
     }
   }, [id]);
 
@@ -82,17 +131,14 @@ export default function FacultyDetailPage() {
   const getBestImageUrl = (photoUrl: string | null | undefined): string => {
     if (!photoUrl) return '/default-faculty.jpg';
     
-    // If the URL contains size parameters, try to get a larger version
-    if (photoUrl.includes('?') || photoUrl.includes('&')) {
-      // Try to get a larger version by modifying size parameters
-      return photoUrl.replace(/[?&]size=\d+/, '&size=800')
-                    .replace(/[?&]width=\d+/, '&width=800')
-                    .replace(/[?&]height=\d+/, '&height=800');
-    }
+    // Upgrade small_square to medium_square (8.5x larger!)
+    // Department websites display medium_square but API scrapes small_square
+    let betterUrl = photoUrl.replace('/styles/small_square/', '/styles/medium_square/');
     
-    // If no size parameters, try to add them for better quality
-    const separator = photoUrl.includes('?') ? '&' : '?';
-    return `${photoUrl}${separator}size=800&quality=high`;
+    // Remove query parameters that can reduce quality or add artifacts
+    betterUrl = betterUrl.split('?')[0];
+    
+    return betterUrl;
   };
 
   return (
@@ -152,14 +198,7 @@ export default function FacultyDetailPage() {
               overflow: 'hidden',
               marginBottom: '2rem',
               position: 'relative',
-              cursor: 'pointer',
             }}
-            onClick={() => {
-              if (faculty.photo_url) {
-                window.open(faculty.photo_url, '_blank');
-              }
-            }}
-            title="Click to view full size image"
             >
               {imageLoading && (
                 <div style={{
@@ -179,6 +218,7 @@ export default function FacultyDetailPage() {
                 </div>
               )}
               {faculty.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={getBestImageUrl(faculty.photo_url)}
                   alt={faculty.name}
@@ -228,36 +268,6 @@ export default function FacultyDetailPage() {
               >
                 {faculty.name.split(' ').map(n => n[0]).join('').toUpperCase()}
               </div>
-              {faculty.photo_url && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '1rem',
-                  right: '1rem',
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  color: 'white',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '20px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  fontFamily: 'Nunito Sans, sans-serif',
-                  pointerEvents: 'none',
-                }}>
-                  Click to expand
-                </div>
-              )}
-              
-              {/* Image info */}
-              {faculty.photo_url && (
-                <div style={{
-                  fontSize: '14px',
-                  color: '#666',
-                  textAlign: 'center',
-                  marginTop: '0.5rem',
-                  fontStyle: 'italic',
-                }}>
-                  💡 Click image to view full size
-                </div>
-              )}
             </div>
 
             {/* Research Specialties */}
@@ -325,6 +335,190 @@ export default function FacultyDetailPage() {
                           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
                           {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* AI-Generated Research Summary */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{
+                fontSize: '32px',
+                fontWeight: 800,
+                color: 'var(--ucsb-navy)',
+                marginBottom: '1rem',
+                fontFamily: 'Nunito Sans, sans-serif',
+              }}>
+                AI-Generated Research Summary
+              </h2>
+              
+              {summaryLoading && (
+                <div style={{
+                  fontSize: '18px',
+                  lineHeight: 1.8,
+                  color: 'var(--ucsb-body-text)',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                  padding: '1.5rem',
+                  background: '#f8f9ff',
+                  borderRadius: '8px',
+                  border: '1px solid #e1e5e9',
+                  fontStyle: 'italic',
+                }}>
+                  Loading AI-generated summary...
+                </div>
+              )}
+              
+              {!summaryLoading && summary && (
+                <div style={{
+                  fontSize: '18px',
+                  lineHeight: 1.8,
+                  color: 'var(--ucsb-body-text)',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                  padding: '1.5rem',
+                  background: 'linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%)',
+                  borderRadius: '8px',
+                  border: '2px solid var(--ucsb-aqua)',
+                  boxShadow: '0 2px 8px rgba(0, 54, 96, 0.08)',
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '1rem',
+                    paddingBottom: '0.75rem',
+                    borderBottom: '1px solid #e1e5e9',
+                  }}>
+                    <span style={{
+                      fontSize: '24px',
+                    }}>🤖</span>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--ucsb-aqua)',
+                    }}>
+                      AI-Generated Content
+                    </span>
+                  </div>
+                  {summary}
+                </div>
+              )}
+              
+              {!summaryLoading && !summary && (
+                <div style={{
+                  fontSize: '18px',
+                  lineHeight: 1.6,
+                  color: '#999',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                  padding: '1.5rem',
+                  background: '#f5f5f5',
+                  borderRadius: '8px',
+                  fontStyle: 'italic',
+                  textAlign: 'center',
+                }}>
+                  No AI-generated summary available for this faculty member yet.
+                </div>
+              )}
+            </div>
+
+            {/* AI-Generated Keywords */}
+            {(broadKeywords.length > 0 || keywords.length > 0) && (
+              <div style={{ marginBottom: '2rem' }}>
+                <h2 style={{
+                  fontSize: '32px',
+                  fontWeight: 800,
+                  color: 'var(--ucsb-navy)',
+                  marginBottom: '1rem',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                }}>
+                  AI-Generated Keywords
+                </h2>
+                
+                {/* Broad Keywords */}
+                {broadKeywords.length > 0 && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      color: 'var(--ucsb-navy)',
+                      marginBottom: '0.75rem',
+                      fontFamily: 'Nunito Sans, sans-serif',
+                    }}>
+                      Broad Research Areas
+                    </h3>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                    }}>
+                      {broadKeywords.map((keyword, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            background: 'var(--ucsb-aqua)',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '20px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            fontFamily: 'Nunito Sans, sans-serif',
+                            transition: 'transform 0.2s ease',
+                            cursor: 'default',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Detailed Keywords */}
+                {keywords.length > 0 && (
+                  <div>
+                    <h3 style={{
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      color: 'var(--ucsb-navy)',
+                      marginBottom: '0.75rem',
+                      fontFamily: 'Nunito Sans, sans-serif',
+                    }}>
+                      Specific Research Keywords
+                    </h3>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.4rem',
+                    }}>
+                      {keywords.map((keyword, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            background: '#e8f4f8',
+                            color: 'var(--ucsb-navy)',
+                            padding: '0.4rem 0.8rem',
+                            borderRadius: '16px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            fontFamily: 'Nunito Sans, sans-serif',
+                            border: '1px solid var(--ucsb-aqua)',
+                            transition: 'transform 0.2s ease, background 0.2s ease',
+                            cursor: 'default',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.background = '#d0e8f0';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.background = '#e8f4f8';
+                          }}
+                        >
+                          {keyword}
                         </span>
                       ))}
                     </div>

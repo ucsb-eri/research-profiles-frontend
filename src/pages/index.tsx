@@ -153,13 +153,17 @@ export default function HomePage() {
                 }
                 
                 return (
-                  <FacultyCard key={f.id} faculty={{
-                    id: String(f.id),
-                    name: f.name,
-                    department: f.department,
-                    keywords: cleanKeywords,
-                    image: f.photo_url || '',
-                  }} />
+                  <FacultyCard 
+                    key={f.id} 
+                    faculty={{
+                      id: String(f.id),
+                      name: f.name,
+                      department: f.department,
+                      keywords: cleanKeywords,
+                      image: f.photo_url || '',
+                    }}
+                    showSummary={false}  // Don't show summary on search results
+                  />
                 );
               })}
             </div>

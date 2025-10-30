@@ -1,17 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface SearchBarProps {
   onSearch: (params: { department?: string; topic?: string; name?: string }) => void;
   isLoading?: boolean;
+  liveSearch?: boolean; // Enable live search (search-as-you-type)
 }
 
-export default function FacultySearchBar({ onSearch, isLoading = false }: SearchBarProps) {
+export default function FacultySearchBar({ onSearch, isLoading = false, liveSearch = true }: SearchBarProps) {
   const [searchParams, setSearchParams] = useState({
     topic: '',
     name: '',
     department: ''
   });
   const [hasSearched, setHasSearched] = useState(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Live search effect - triggers search after user stops typing for 500ms
+  useEffect(() => {
+    if (!liveSearch) return;
+
+    // Clear existing timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Only trigger live search if name field has at least 2 characters
+    if (searchParams.name.trim().length >= 2) {
+      debounceTimer.current = setTimeout(() => {
+        const params: { department?: string; topic?: string; name?: string } = {};
+        if (searchParams.name.trim()) params.name = searchParams.name.trim();
+        if (searchParams.topic.trim()) params.topic = searchParams.topic.trim();
+        if (searchParams.department.trim()) params.department = searchParams.department.trim();
+        
+        setHasSearched(true);
+        onSearch(params);
+      }, 500); // 500ms debounce delay
+    } else if (searchParams.name.trim().length === 0 && hasSearched) {
+      // If name field is cleared, show all results
+      const params: { department?: string; topic?: string; name?: string } = {};
+      if (searchParams.topic.trim()) params.topic = searchParams.topic.trim();
+      if (searchParams.department.trim()) params.department = searchParams.department.trim();
+      onSearch(params);
+    }
+
+    // Cleanup function
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.name, liveSearch]); // Only trigger on name changes for live search
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,14 +118,14 @@ export default function FacultySearchBar({ onSearch, isLoading = false }: Search
               display: 'block',
             }}
           >
-            Research Topic/Expertise
+            Research Topic/Expertise 
           </label>
           <input
             id="topic"
             type="text"
             value={searchParams.topic}
             onChange={(e) => setSearchParams(prev => ({ ...prev, topic: e.target.value }))}
-            placeholder="e.g., African diaspora, social justice, or black feminism"
+            placeholder="e.g., climate change, marine biology, oceanography"
             style={{
               width: '100%',
               fontSize: 22,
@@ -191,18 +230,6 @@ export default function FacultySearchBar({ onSearch, isLoading = false }: Search
 
         </div>
       </div>
-      
-      {/* Search tips */}
-      {!hasSearched && (
-        <div style={{
-          fontSize: 14,
-          color: '#666',
-          marginBottom: 16,
-          fontStyle: 'italic',
-        }}>
-          💡 Search tips: Try searching by research topic, faculty name, or department. You can combine multiple criteria for more specific results.
-        </div>
-      )}
       
       {/* Search buttons */}
       <div style={{
