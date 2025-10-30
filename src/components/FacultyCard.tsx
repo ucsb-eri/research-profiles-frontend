@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { fetchFacultySummaryTextById } from '../lib/api';
 
 export type Faculty = {
   id: string;
@@ -7,18 +8,65 @@ export type Faculty = {
   department: string | string[];
   keywords: string[];
   image: string;
+  summary?: string; // Optional summary text
 };
 
-export default function FacultyCard({ faculty }: { faculty: Faculty }) {
+export default function FacultyCard({ faculty, showSummary = false }: { 
+  faculty: Faculty;
+  showSummary?: boolean;
+}) {
   const router = useRouter();
+  const [summary, setSummary] = useState<string | null>(faculty.summary || null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
   
   // Allow department to be string or array for future flexibility
   const departments = Array.isArray(faculty.department)
     ? faculty.department
     : [faculty.department];
 
+  // Fetch summary if showSummary is true
+  useEffect(() => {
+    if (showSummary) {
+      const facultyId = parseInt(faculty.id);
+      setLoadingSummary(true);
+      fetchFacultySummaryTextById(facultyId)
+        .then(data => {
+          if (data && data.summary) {
+            setSummary(data.summary);
+          }
+        })
+        .catch(error => {
+          console.error('Failed to fetch summary:', error);
+          setSummary(null);
+        })
+        .finally(() => {
+          setLoadingSummary(false);
+        });
+    }
+  }, [showSummary, faculty.id]);
+
   const handleCardClick = () => {
     router.push(`/faculty/${faculty.id}`);
+  };
+
+  // Truncate summary to ~150 characters
+  const truncateSummary = (text: string, maxLength = 150) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength).trim() + '...';
+  };
+
+  // Get higher quality image by upgrading to medium_square
+  const getHighQualityImage = (url: string): string => {
+    if (!url) return url;
+    
+    // Upgrade small_square to medium_square (8.5x larger!)
+    // Department websites display medium_square but API scrapes small_square
+    let betterUrl = url.replace('/styles/small_square/', '/styles/medium_square/');
+    
+    // Remove query parameters that can reduce quality or add artifacts
+    betterUrl = betterUrl.split('?')[0];
+    
+    return betterUrl;
   };
 
   return (
@@ -47,8 +95,9 @@ export default function FacultyCard({ faculty }: { faculty: Faculty }) {
       }}
     >
       {faculty.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={faculty.image}
+          src={getHighQualityImage(faculty.image)}
           alt={faculty.name}
           style={{
             width: '100%',
@@ -110,15 +159,44 @@ export default function FacultyCard({ faculty }: { faculty: Faculty }) {
             <div key={i}>{dept}</div>
           ))}
         </div>
-        <div style={{
-          color: 'var(--ucsb-body-text)',
-          fontSize: 17,
-          fontWeight: 400,
-          textAlign: 'left',
-          lineHeight: 1.5,
-        }}>
-          {faculty.keywords.join(', ')}
-        </div>
+        {/* Display summary if enabled */}
+        {showSummary && (
+          <div style={{
+            marginTop: 12,
+            paddingTop: 12,
+            borderTop: '1px solid var(--ucsb-light-gray)',
+          }}>
+            {loadingSummary && (
+              <div style={{
+                color: 'var(--ucsb-body-text)',
+                fontSize: 15,
+                fontStyle: 'italic',
+              }}>
+                Loading summary...
+              </div>
+            )}
+            {!loadingSummary && summary && (
+              <div style={{
+                color: 'var(--ucsb-body-text)',
+                fontSize: 15,
+                lineHeight: 1.6,
+                textAlign: 'left',
+              }}>
+                {truncateSummary(summary, 180)}
+              </div>
+            )}
+            {!loadingSummary && !summary && showSummary && (
+              <div style={{
+                color: 'var(--ucsb-body-text)',
+                fontSize: 15,
+                fontStyle: 'italic',
+                opacity: 0.7,
+              }}>
+                No summary available
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
