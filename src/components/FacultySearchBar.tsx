@@ -139,6 +139,14 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
               backgroundColor: searchParams.topic ? '#f8f9ff' : 'white',
               color: searchParams.topic ? 'var(--ucsb-navy)' : '#374151',
               fontWeight: searchParams.topic ? '600' : '400',
+              transition: 'border-color 0.2s, background-color 0.2s',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.outline = '2px solid var(--ucsb-gold)';
+              e.currentTarget.style.outlineOffset = '2px';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
             }}
           />
 
@@ -175,6 +183,14 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
               backgroundColor: searchParams.name ? '#f8f9ff' : 'white',
               color: searchParams.name ? 'var(--ucsb-navy)' : '#374151',
               fontWeight: searchParams.name ? '600' : '400',
+              transition: 'border-color 0.2s, background-color 0.2s',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.outline = '2px solid var(--ucsb-gold)';
+              e.currentTarget.style.outlineOffset = '2px';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
             }}
           />
 
@@ -211,6 +227,14 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
               fontWeight: searchParams.department ? '600' : '400',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              transition: 'border-color 0.2s, background-color 0.2s',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.outline = '2px solid var(--ucsb-gold)';
+              e.currentTarget.style.outlineOffset = '2px';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
             }}
           >
             <option value="">All Departments</option>
@@ -252,6 +276,20 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
             cursor: isLoading ? 'not-allowed' : 'pointer',
             opacity: isLoading ? 0.7 : 1,
             fontFamily: 'Nunito Sans, sans-serif',
+            transition: 'background-color 0.2s, transform 0.1s',
+            minHeight: 44,
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = 'var(--ucsb-gold)';
+              e.currentTarget.style.color = 'var(--ucsb-navy)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = 'var(--ucsb-navy)';
+              e.currentTarget.style.color = 'white';
+            }
           }}
         >
           {isLoading ? 'Searching...' : 'Search Faculty'}
@@ -272,6 +310,20 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
             cursor: isLoading ? 'not-allowed' : 'pointer',
             opacity: isLoading ? 0.7 : 1,
             fontFamily: 'Nunito Sans, sans-serif',
+            transition: 'border-color 0.2s, color 0.2s, background-color 0.2s',
+            minHeight: 44,
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.borderColor = 'var(--ucsb-gold)';
+              e.currentTarget.style.color = 'var(--ucsb-gold)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.borderColor = 'var(--ucsb-navy)';
+              e.currentTarget.style.color = 'var(--ucsb-navy)';
+            }
           }}
         >
           Clear Search

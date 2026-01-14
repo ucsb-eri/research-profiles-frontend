@@ -1,82 +1,123 @@
-/* UCSB Color Palette */
+/* UCSB Brand Guidelines: Official Color Palette
+ * Reference: https://brand.ucsb.edu/visual-identity/color
+ * Primary: Pacific Blue (Pantone 286), Gaucho Gold (Pantone 130)
+ * Accent: Navy Blue (Pantone 275)
+ */
 :root {
-  --ucsb-navy: #003660;
-  --ucsb-gold: #ffb500;
-  --ucsb-aqua: #007396;
+  /* Primary Brand Colors */
+  --ucsb-navy: #003660; /* Navy Blue - Primary brand color */
+  --ucsb-gold: #ffb500; /* Gaucho Gold - Primary brand color */
+  --ucsb-aqua: #007396; /* Pacific Blue variant */
+  
+  /* Secondary/Accent Colors */
   --ucsb-moss: #6e7b41;
   --ucsb-sea-green: #009ca6;
   --ucsb-coral: #e87722;
   --ucsb-mist: #a9c4cb;
   --ucsb-clay: #d7d2cb;
   --ucsb-sandstone: #bfa980;
+  
+  /* Neutral Colors */
   --ucsb-light-gray: #d0d3d4;
   --ucsb-white: #ffffff;
   --ucsb-black: #000000;
   --ucsb-body-text: #3d4952;
+  
+  /* UCSB Brand: Accessibility - Ensure sufficient contrast ratios */
+  --ucsb-link-color: var(--ucsb-navy);
+  --ucsb-link-hover: var(--ucsb-gold);
+  --ucsb-border-color: #e5e7eb;
 }
 
 body {
   color: var(--ucsb-body-text);
-  font-family: "Nunito Sans", sans-serif;
+  /* UCSB Brand Guidelines: Use official web fonts from webfonts.brand.ucsb.edu */
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 400;
   font-style: normal;
   font-size: 16px;
   background: var(--ucsb-white);
   margin: 0;
   line-height: 1.6;
+  /* UCSB Brand: Ensure proper text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* UCSB Brand Guidelines: Typography hierarchy */
 h1 {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 800;
   font-size: 38px;
   letter-spacing: -0.1pt;
   color: var(--ucsb-navy);
+  line-height: 1.2;
+  margin: 0;
 }
 h2 {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 800;
   font-size: 27px;
   letter-spacing: -0.1pt;
   color: var(--ucsb-navy);
+  line-height: 1.3;
+  margin: 0;
 }
 h3 {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 800;
   font-size: 21px;
   color: var(--ucsb-navy);
+  line-height: 1.4;
+  margin: 0;
 }
 h4 {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 800;
   font-size: 16px;
   color: var(--ucsb-navy);
+  line-height: 1.4;
+  margin: 0;
 }
 h5 {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 800;
   font-size: 12px;
   color: var(--ucsb-navy);
+  line-height: 1.5;
+  margin: 0;
 }
 h6 {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 600;
   font-size: 12px;
   color: var(--ucsb-navy);
+  line-height: 1.5;
+  margin: 0;
 }
 
+/* UCSB Brand Guidelines: Link styles */
 a {
-  color: var(--ucsb-navy);
+  color: var(--ucsb-link-color);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color 0.2s, border-color 0.2s;
+  /* Ensure links are clearly identifiable */
+  border-bottom: 1px solid transparent;
 }
 a:hover {
-  color: var(--ucsb-gold);
+  color: var(--ucsb-link-hover);
+  border-bottom-color: var(--ucsb-link-hover);
+}
+a:focus {
+  outline: 2px solid var(--ucsb-gold);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
+/* UCSB Brand Guidelines: Button styles using official colors */
 button,
 input[type="submit"] {
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 700;
   background: var(--ucsb-navy);
   color: var(--ucsb-white);
@@ -84,17 +125,75 @@ input[type="submit"] {
   border-radius: 4px;
   padding: 0.6em 1.2em;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  /* UCSB Brand: Ensure buttons meet accessibility standards */
+  min-height: 44px; /* Touch target size */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 button:hover,
 input[type="submit"]:hover {
   background: var(--ucsb-gold);
   color: var(--ucsb-navy);
+  transform: translateY(-1px);
+}
+button:active,
+input[type="submit"]:active {
+  transform: translateY(0);
+}
+button:focus,
+input[type="submit"]:focus {
+  outline: 2px solid var(--ucsb-gold);
+  outline-offset: 2px;
+}
+button:disabled,
+input[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
+/* UCSB Brand: Utility classes */
 .bg-navy { background: var(--ucsb-navy); color: var(--ucsb-white); }
 .bg-gold { background: var(--ucsb-gold); color: var(--ucsb-navy); }
 .bg-light { background: var(--ucsb-light-gray); }
+
+/* UCSB Brand Guidelines: Form input styles */
+input[type="text"],
+input[type="email"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea {
+  font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ucsb-body-text);
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--ucsb-gold);
+  outline-offset: 2px;
+  border-color: var(--ucsb-navy);
+}
+
+/* UCSB Brand: Ensure proper contrast and readability */
+::selection {
+  background-color: var(--ucsb-gold);
+  color: var(--ucsb-navy);
+}
+
+::-moz-selection {
+  background-color: var(--ucsb-gold);
+  color: var(--ucsb-navy);
+}
 
 .grid {
   display: grid;

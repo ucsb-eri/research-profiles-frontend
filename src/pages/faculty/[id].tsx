@@ -153,20 +153,37 @@ export default function FacultyDetailPage() {
         <div style={{
           maxWidth: 1400,
           margin: '0 auto',
-          padding: '0 1.5rem',
+          padding: '0 2rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
           <Link href="/" style={{
-            color: 'var(--ucsb-navy)',
-            fontWeight: 800,
-            fontSize: 32,
-            fontFamily: 'Nunito Sans, sans-serif',
-            letterSpacing: '-0.5px',
+            display: 'flex',
+            alignItems: 'center',
             textDecoration: 'none',
+            outline: 'none',
           }}>
-            UCSB Research
+            <img
+              src="/UCSB_Tab_KO_Navy_RGB (1).png"
+              alt="UC Santa Barbara"
+              style={{
+                height: '40px',
+                width: 'auto',
+                maxWidth: '100%',
+              }}
+            />
+            <span style={{
+              color: 'var(--ucsb-navy)',
+              fontWeight: 800,
+              fontSize: 24,
+              fontFamily: 'Nunito Sans, sans-serif',
+              letterSpacing: '-0.5px',
+              lineHeight: 1.2,
+              marginLeft: '1rem',
+            }}>
+              Research
+            </span>
           </Link>
           <Link href="/" style={{
             color: 'var(--ucsb-navy)',
@@ -182,7 +199,7 @@ export default function FacultyDetailPage() {
       </div>
 
       {/* Main content */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '2rem 2rem' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: '2fr 1fr',
@@ -750,6 +767,34 @@ export default function FacultyDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Footer with UCSB wordmark */}
+      <footer style={{
+        background: 'var(--ucsb-navy)',
+        padding: '2rem 0',
+        marginTop: '4rem',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+      }}>
+        <div style={{
+          maxWidth: 1400,
+          margin: '0 auto',
+          padding: '0 2rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <img
+            src="/UC_Santa_Barbara_Wordmark_Navy_RGB (1).png"
+            alt="UC Santa Barbara"
+            style={{
+              height: '35px',
+              width: 'auto',
+              maxWidth: '100%',
+              filter: 'brightness(0) invert(1)', // Make it white for dark background
+            }}
+          />
+        </div>
+      </footer>
     </div>
   );
 }
