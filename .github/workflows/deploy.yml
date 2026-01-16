@@ -16,12 +16,27 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: install dependencies
+      - name: install dependencies (including dev dependencies for build)
         run: |
-          npm install --omit=dev
+          set -e
+          npm install
+          echo "Dependencies installed successfully"
       - name: build the site
         run: |
+          set -e
           npm run build
+          echo "Build completed successfully"
+      - name: verify build output
+        run: |
+          set -e
+          if [ ! -d "out" ]; then
+            echo "Error: Build output directory 'out' does not exist!"
+            echo "Build may have failed. Checking for errors above."
+            exit 1
+          fi
+          echo "Build output verified:"
+          ls -la out | head -10
+          echo "Build output size: $(du -sh out)"
       - name: copy build to the server
         uses: appleboy/scp-action@v1
         with:
