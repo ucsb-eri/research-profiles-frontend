@@ -16,27 +16,27 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Fix npm cache permissions
+      - name: install dependencies (including dev dependencies for build)
         run: |
           set -e
-          # Fix npm cache permissions if needed
-          if [ -d "/opt/npm-cache" ]; then
-            sudo chown -R $(whoami):$(whoami) "/opt/npm-cache" || true
-          fi
-          # Use a user-specific cache directory to avoid permission issues
-          mkdir -p "$HOME/.npm-cache"
-          npm config set cache "$HOME/.npm-cache"
-      - name: Clean and install dependencies
-        run: |
-          set -e
-          # Clean up any corrupted node_modules
-          rm -rf node_modules
-          # Install dependencies
-          npm ci --omit=dev || npm install --omit=dev
+          npm install
+          echo "Dependencies installed successfully"
       - name: build the site
         run: |
           set -e
           npm run build
+          echo "Build completed successfully"
+      - name: verify build output
+        run: |
+          set -e
+          if [ ! -d "out" ]; then
+            echo "Error: Build output directory 'out' does not exist!"
+            echo "Build may have failed. Checking for errors above."
+            exit 1
+          fi
+          echo "Build output verified:"
+          ls -la out | head -10
+          echo "Build output size: $(du -sh out)"
       - name: copy build to the server
         uses: appleboy/scp-action@v1
         with:
