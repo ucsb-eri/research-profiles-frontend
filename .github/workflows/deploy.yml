@@ -13,30 +13,58 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create isolated npm config + cache dir
+        run: |
+          set -e
+          RUNNER_TEMP_DIR="${RUNNER_TEMP:-/tmp}"
+          NPM_CACHE_DIR="$RUNNER_TEMP_DIR/npm-cache"
+          NPM_CONFIG_FILE="$RUNNER_TEMP_DIR/.npmrc"
+
+          mkdir -p "$NPM_CACHE_DIR"
+          cat > "$NPM_CONFIG_FILE" <<EOF
+          cache=$NPM_CACHE_DIR
+          fund=false
+          audit=false
+          EOF
+
+          {
+            echo "NPM_CONFIG_CACHE=$NPM_CACHE_DIR"
+            echo "npm_config_cache=$NPM_CACHE_DIR"
+            echo "NPM_CONFIG_USERCONFIG=$NPM_CONFIG_FILE"
+          } >> "$GITHUB_ENV"
+
+          echo "npm cache = $NPM_CACHE_DIR"
+          echo "userconfig = $NPM_CONFIG_FILE"
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+
       - name: install dependencies (including dev dependencies for build)
         run: |
           set -e
+          echo "npm reports cache: $(npm config get cache)"
           npm install
           echo "Dependencies installed successfully"
+
       - name: build the site
         run: |
           set -e
           npm run build
           echo "Build completed successfully"
+
       - name: verify build output
         run: |
           set -e
           if [ ! -d "out" ]; then
             echo "Error: Build output directory 'out' does not exist!"
-            echo "Build may have failed. Checking for errors above."
             exit 1
           fi
           echo "Build output verified:"
           ls -la out | head -10
           echo "Build output size: $(du -sh out)"
+
       - name: copy build to the server
         uses: appleboy/scp-action@v1
         with:
@@ -47,4 +75,3 @@ jobs:
           strip_components: 1
           target: /home/research-profiles/production/research-profiles-frontend
           rm: true
-            
