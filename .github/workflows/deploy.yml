@@ -51,8 +51,13 @@ jobs:
           echo "Dependencies installed successfully"
 
       - name: build the site
+        env:
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
         run: |
           set -e
+          if [ -z "$NEXT_PUBLIC_GOOGLE_CLIENT_ID" ]; then
+            echo "Warning: NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set. OAuth will not work in production."
+          fi
           npm run build
           echo "Build completed successfully"
 

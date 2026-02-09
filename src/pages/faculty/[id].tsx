@@ -30,7 +30,6 @@ export default function FacultyDetailPage() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [broadKeywords, setBroadKeywords] = useState<string[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [keywordsLoading, setKeywordsLoading] = useState(false);
 
   useEffect(() => {
