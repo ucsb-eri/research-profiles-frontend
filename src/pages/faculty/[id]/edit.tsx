@@ -128,7 +128,7 @@ export default function FacultyEditPage() {
             Unauthorized
           </div>
           <p style={{ marginBottom: '2rem', color: 'var(--ucsb-body-text)' }}>
-            You can only edit your own profile. The email you signed in with ({userEmail}) does not match this profile's email ({faculty.email}).
+            You can only edit your own profile. The email you signed in with ({userEmail}) does not match this profile&apos;s email ({faculty.email}).
             {userEmail?.toLowerCase() === 'brian_kim@ucsb.edu' && (
               <span style={{ display: 'block', marginTop: '0.5rem', color: 'var(--ucsb-aqua)', fontWeight: 600 }}>
                 Note: brian_kim@ucsb.edu has test access to edit any profile.
