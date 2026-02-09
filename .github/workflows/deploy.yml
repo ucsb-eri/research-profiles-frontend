@@ -44,7 +44,9 @@ jobs:
       - name: install dependencies (including dev dependencies for build)
         run: |
           set -e
+          # Verify npm is using our custom config
           echo "npm reports cache: $(npm config get cache)"
+          echo "npm config file: $(npm config get userconfig)"
           npm install
           echo "Dependencies installed successfully"
 

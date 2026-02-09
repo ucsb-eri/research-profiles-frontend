@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import FacultyCard, { Faculty } from '../components/FacultyCard';
+import FacultyCard from '../components/FacultyCard';
 import FacultySearchBar from '../components/FacultySearchBar';
 import { fetchFaculty } from '../lib/api';
 
@@ -135,7 +135,7 @@ export default function HomePage() {
                 {Object.values(lastSearchParams).some(val => val && val.trim()) && (
                   <span style={{ fontSize: 16, fontWeight: 400, color: '#666', marginLeft: 8 }}>
                     {Object.entries(lastSearchParams)
-                      .filter(([_, value]) => value && value.trim())
+                      .filter(([, value]) => value && value.trim())
                       .map(([key, value]) => `${key}: "${value}"`)
                       .join(', ')}
                   </span>
