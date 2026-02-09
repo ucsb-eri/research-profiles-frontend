@@ -53,6 +53,7 @@ jobs:
       - name: build the site
         env:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          NEXT_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
         run: |
           set -e
           if [ -z "$NEXT_PUBLIC_GOOGLE_CLIENT_ID" ]; then
