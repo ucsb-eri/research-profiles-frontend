@@ -40,7 +40,7 @@ export default function FacultyDetailPage() {
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false));
     }
-  }, [id]);
+  }, [id, router.asPath]); // Also depend on router.asPath to refetch when navigating back
 
   // Fetch AI-generated summary, keywords, and broad keywords
   useEffect(() => {
@@ -210,7 +210,8 @@ export default function FacultyDetailPage() {
           <div>
             {/* Faculty photo */}
             <div style={{
-              width: '100%',
+              width: '75%',
+              margin: '0 auto',
               borderRadius: '12px',
               overflow: 'hidden',
               marginBottom: '2rem',
@@ -273,12 +274,12 @@ export default function FacultyDetailPage() {
                 style={{
                   display: faculty.photo_url ? 'none' : 'flex',
                   width: '100%',
-                  height: '400px',
+                  height: '300px',
                   background: 'linear-gradient(135deg, var(--ucsb-aqua) 0%, var(--ucsb-navy) 100%)',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
-                  fontSize: '120px',
+                  fontSize: '90px',
                   fontWeight: 'bold',
                   fontFamily: 'Nunito Sans, sans-serif',
                 }}
@@ -586,74 +587,64 @@ export default function FacultyDetailPage() {
               </div>
             </div>
 
-            {/* Research Specialties Summary */}
-            {(faculty.specialization || researchAreas.length > 0) && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: 'var(--ucsb-navy)',
-                  marginBottom: '1rem',
-                  fontFamily: 'Nunito Sans, sans-serif',
-                }}>
-                  Research Specialties
-                </h3>
-                
-                {/* Brief specialization preview */}
-                {faculty.specialization && (
-                  <div style={{
-                    fontSize: '14px',
-                    lineHeight: 1.5,
-                    color: 'var(--ucsb-body-text)',
-                    marginBottom: researchAreas.length > 0 ? '1rem' : '0',
-                    fontFamily: 'Nunito Sans, sans-serif',
-                    fontStyle: 'italic',
-                  }}>
-                    {faculty.specialization.length > 120 
-                      ? `${faculty.specialization.substring(0, 120)}...` 
-                      : faculty.specialization
-                    }
-                  </div>
+            {/* Links */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {faculty.website && (
+                  <a
+                    href={faculty.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--ucsb-aqua)',
+                      textDecoration: 'none',
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      padding: '0.5rem 0',
+                    }}
+                  >
+                    Faculty Site
+                  </a>
                 )}
-                
-                {/* Top research areas */}
-                {researchAreas.length > 0 && (
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.25rem',
-                  }}>
-                    {researchAreas.slice(0, 4).map((area, index) => (
-                      <span
-                        key={index}
-                        style={{
-                          background: 'var(--ucsb-aqua)',
-                          color: 'white',
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          fontFamily: 'Nunito Sans, sans-serif',
-                        }}
-                      >
-                        {area}
-                      </span>
-                    ))}
-                    {researchAreas.length > 4 && (
-                      <span style={{
-                        color: 'var(--ucsb-aqua)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        fontFamily: 'Nunito Sans, sans-serif',
-                        alignSelf: 'center',
-                      }}>
-                        +{researchAreas.length - 4} more
-                      </span>
-                    )}
-                  </div>
+                {faculty.profile_url && (
+                  <a
+                    href={faculty.profile_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--ucsb-aqua)',
+                      textDecoration: 'none',
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      padding: '0.5rem 0',
+                    }}
+                  >
+                    Publications (Google Scholar)
+                  </a>
                 )}
+                <a
+                  href={`https://www.ucsb.edu/directory/search?q=${encodeURIComponent(faculty.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'var(--ucsb-aqua)',
+                    textDecoration: 'none',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    padding: '0.5rem 0',
+                  }}
+                >
+                  Search UCSB Directory →
+                </a>
               </div>
-            )}
+            </div>
+
+            {/* Dividing line */}
+            <hr style={{
+              border: 'none',
+              borderTop: '1px solid #d0d3d4',
+              margin: '1.5rem 0',
+            }} />
 
             {/* Contact information */}
             <div style={{ marginBottom: '2rem' }}>
@@ -667,102 +658,103 @@ export default function FacultyDetailPage() {
                 Contact Information
               </h3>
               {faculty.email && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong style={{ color: 'var(--ucsb-navy)' }}>Email:</strong>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <span style={{
+                    color: 'var(--ucsb-navy)',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    fontFamily: 'Nunito Sans, sans-serif',
+                  }}>
+                    Email:{' '}
+                  </span>
                   <a
                     href={`mailto:${faculty.email}`}
                     style={{
                       color: 'var(--ucsb-aqua)',
                       textDecoration: 'none',
-                      marginLeft: '0.5rem',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      fontFamily: 'Nunito Sans, sans-serif',
                     }}
                   >
                     {faculty.email}
                   </a>
                 </div>
               )}
-              {faculty.phone && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong style={{ color: 'var(--ucsb-navy)' }}>Phone:</strong>
-                  <span style={{ marginLeft: '0.5rem' }}>{faculty.phone}</span>
-                </div>
-              )}
               {faculty.office && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong style={{ color: 'var(--ucsb-navy)' }}>Office:</strong>
-                  <span style={{ marginLeft: '0.5rem' }}>{faculty.office}</span>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <span style={{
+                    color: 'var(--ucsb-navy)',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    fontFamily: 'Nunito Sans, sans-serif',
+                  }}>
+                    Office:{' '}
+                  </span>
+                  <span style={{
+                    color: 'var(--ucsb-navy)',
+                    fontSize: '16px',
+                    fontWeight: 400,
+                    fontFamily: 'Nunito Sans, sans-serif',
+                  }}>
+                    {faculty.office}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Links */}
+            {/* Dividing line */}
+            <hr style={{
+              border: 'none',
+              borderTop: '1px solid #d0d3d4',
+              margin: '1.5rem 0',
+            }} />
+
+            {/* Update your profile */}
             <div>
-              <h3 style={{
-                fontSize: '20px',
-                fontWeight: 700,
-                color: 'var(--ucsb-navy)',
-                marginBottom: '1rem',
-                fontFamily: 'Nunito Sans, sans-serif',
-              }}>
-                Links
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {faculty.website && (
-                  <a
-                    href={faculty.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: 'var(--ucsb-aqua)',
-                      textDecoration: 'none',
-                      fontSize: '16px',
-                      padding: '0.5rem 0',
-                      borderBottom: '1px solid transparent',
-                      transition: 'border-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = 'var(--ucsb-aqua)'}
-                    onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = 'transparent'}
-                  >
-                    Faculty Website →
-                  </a>
-                )}
-                {faculty.profile_url && (
-                  <a
-                    href={faculty.profile_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: 'var(--ucsb-aqua)',
-                      textDecoration: 'none',
-                      fontSize: '16px',
-                      padding: '0.5rem 0',
-                      borderBottom: '1px solid transparent',
-                      transition: 'border-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = 'var(--ucsb-aqua)'}
-                    onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = 'transparent'}
-                  >
-                    UCSB Profile →
-                  </a>
-                )}
-                <a
-                  href={`https://www.ucsb.edu/directory/search?q=${encodeURIComponent(faculty.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: 'var(--ucsb-aqua)',
-                    textDecoration: 'none',
-                    fontSize: '16px',
-                    padding: '0.5rem 0',
-                    borderBottom: '1px solid transparent',
-                    transition: 'border-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = 'var(--ucsb-aqua)'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = 'transparent'}
-                >
-                  Search UCSB Directory →
-                </a>
-              </div>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Build Google OAuth URL
+                  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+                  if (!clientId) {
+                    alert('Google OAuth not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.');
+                    return;
+                  }
+
+                  const redirectUri = `${window.location.origin}/auth/callback`;
+                  const scope = 'openid email profile';
+                  const state = btoa(JSON.stringify({
+                    redirectUrl: `/faculty/${faculty.id}`,
+                    facultyId: faculty.id.toString()
+                  }));
+
+                  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+                  authUrl.searchParams.set('client_id', clientId);
+                  authUrl.searchParams.set('redirect_uri', redirectUri);
+                  authUrl.searchParams.set('response_type', 'token'); // Using implicit flow for client-side
+                  authUrl.searchParams.set('scope', scope);
+                  authUrl.searchParams.set('state', state);
+
+                  // Redirect to Google OAuth
+                  window.location.href = authUrl.toString();
+                }}
+                style={{
+                  color: 'var(--ucsb-aqua)',
+                  textDecoration: 'none',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  padding: '0.5rem 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Update your profile
+                <span style={{ fontSize: '12px' }}>▶</span>
+              </a>
             </div>
           </div>
         </div>
