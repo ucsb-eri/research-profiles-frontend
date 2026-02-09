@@ -3,9 +3,9 @@
 // For production, uncomment the production URLs below and comment out localhost
 
 // Local development
-const API_BASE_URL = 'http://localhost:3001';
+// const API_BASE_URL = 'http://localhost:3001';
 // Production (uncomment when deploying)
-// const API_BASE_URL = 'https://api.research-profiles.grit.ucsb.edu';
+const API_BASE_URL = 'https://api.research-profiles.grit.ucsb.edu';
 
 const API_BASE = `${API_BASE_URL}/api/faculty`;
 const API_SUMMARY_BASE = `${API_BASE_URL}/api/faculty-summary`;
