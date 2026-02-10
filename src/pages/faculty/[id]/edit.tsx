@@ -42,8 +42,15 @@ export default function FacultyEditPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
+    // Debug logging
+    console.log('=== EDIT PAGE LOADED ===');
+    console.log('ID from router:', id);
+    console.log('Router query:', router.query);
+    console.log('Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
+    
     // Check authentication
     const email = getUserEmail();
+    console.log('User email:', email);
     setUserEmail(email);
     
     if (!email) {
@@ -75,9 +82,8 @@ export default function FacultyEditPage() {
               website: facultyData.website || '',
               profile_url: facultyData.profile_url || '',
             });
-          } else {
-            setError('You are not authorized to edit this profile');
           }
+          // If not authorized, leave authorized as false to show unauthorized view
           setLoading(false);
         })
         .catch((err) => {
@@ -85,7 +91,7 @@ export default function FacultyEditPage() {
           setLoading(false);
         });
     }
-  }, [id]);
+  }, [id, router.query]);
 
   if (loading) {
     return (
@@ -120,14 +126,14 @@ export default function FacultyEditPage() {
     );
   }
 
-  if (!authorized) {
+  if (!authorized && faculty) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--ucsb-white)' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', padding: '4rem 2rem', textAlign: 'center' }}>
           <div style={{ fontSize: '24px', color: 'red', marginBottom: '1rem' }}>
-            Unauthorized
+            You Cannot Edit This Profile
           </div>
-          <p style={{ marginBottom: '2rem', color: 'var(--ucsb-body-text)' }}>
+          <p style={{ marginBottom: '2rem', color: 'var(--ucsb-body-text)', lineHeight: '1.6' }}>
             You can only edit your own profile. The email you signed in with ({userEmail}) does not match this profile&apos;s email ({faculty.email}).
             {userEmail?.toLowerCase() === 'brian_kim@ucsb.edu' && (
               <span style={{ display: 'block', marginTop: '0.5rem', color: 'var(--ucsb-aqua)', fontWeight: 600 }}>

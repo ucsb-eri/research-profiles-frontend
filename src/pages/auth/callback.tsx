@@ -64,10 +64,19 @@ export default function AuthCallback() {
         localStorage.setItem('user_name', userInfo.name);
         localStorage.setItem('access_token', accessToken);
 
+        // Debug logging before redirect
+        console.log('=== AUTH CALLBACK DEBUG ===');
+        console.log('Faculty ID:', facultyId);
+        console.log('Redirect URL:', redirectUrl);
+        console.log('User email:', userInfo.email);
+        console.log('About to redirect to:', facultyId ? `/faculty/${facultyId}/edit` : redirectUrl);
+
         // Redirect to the appropriate page
         if (facultyId) {
+          console.log('Redirecting to edit page...');
           router.push(`/faculty/${facultyId}/edit`);
         } else {
+          console.log('Redirecting to fallback...');
           router.push(redirectUrl);
         }
       } catch (err) {

@@ -55,13 +55,6 @@ jobs:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
         run: |
           set -e
-          # Verify environment variable is set (without exposing full value)
-          if [ -z "$NEXT_PUBLIC_GOOGLE_CLIENT_ID" ]; then
-            echo "Error: NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set!"
-            exit 1
-          fi
-          echo "Client ID is set (length: ${#NEXT_PUBLIC_GOOGLE_CLIENT_ID} chars)"
-          echo "Client ID starts with: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:0:10}..."
           npm run build
           echo "Build completed successfully"
 
