@@ -129,3 +129,10 @@ export default function AuthCallback() {
 
   return null;
 }
+
+// Add this to force static generation
+export async function getStaticProps() {
+  return {
+    props: {},
+  };
+}

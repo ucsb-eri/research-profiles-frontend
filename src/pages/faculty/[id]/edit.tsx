@@ -530,3 +530,26 @@ export default function FacultyEditPage() {
     </div>
   );
 }
+
+// Add static paths generation for static export
+export async function getStaticPaths() {
+  // Generate paths for common faculty IDs or fetch from your API
+  // For now, let's just generate a few for testing
+  return {
+    paths: [
+      { params: { id: '1' } },
+      { params: { id: '2' } },
+      { params: { id: '3' } },
+      { params: { id: '4' } },
+      { params: { id: '5' } },
+      // Add more as needed
+    ],
+    fallback: 'blocking', // This allows other IDs to work client-side
+  };
+}
+
+export async function getStaticProps() {
+  return {
+    props: {},
+  };
+}
