@@ -54,7 +54,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/research-profiles/production/research-profiles-frontend
-            npm install --omit=dev
+            npm install
+            npm run build
       - name: restart the service
         uses: appleboy/ssh-action@v1
         with:
