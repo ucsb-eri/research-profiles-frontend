@@ -56,13 +56,14 @@ jobs:
             set -e
             cd /home/research-profiles/production/research-profiles-frontend
             
-            # Set production environment
+            # Install ALL dependencies (including dev dependencies needed for build)
+            # Don't set NODE_ENV=production yet, as it would skip devDependencies
+            echo "Installing dependencies (including dev dependencies for build)..."
+            npm install
+            
+            # Now set production environment for the build
             export NODE_ENV=production
             export NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}"
-            
-            # Install dependencies (including dev dependencies needed for build)
-            echo "Installing dependencies..."
-            npm install
             
             # Build in production mode
             echo "Building Next.js app in production mode..."
