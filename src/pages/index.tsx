@@ -18,6 +18,7 @@ interface BackendFaculty {
   research_areas?: string[]; // Now an array instead of string
   department: string;
   profile_url?: string;
+  rank?: number; // Relevance score (0-1) from the fuzzy search endpoint
 }
 
 export default function HomePage() {

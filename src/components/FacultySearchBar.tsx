@@ -15,7 +15,8 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
   const [hasSearched, setHasSearched] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Live search effect - triggers search after user stops typing for 500ms
+  // Live search effect - triggers fuzzy search-as-you-type after the user
+  // stops typing for 400ms. Watches both the name and topic/expertise fields.
   useEffect(() => {
     if (!liveSearch) return;
 
@@ -24,21 +25,22 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
       clearTimeout(debounceTimer.current);
     }
 
-    // Only trigger live search if name field has at least 2 characters
-    if (searchParams.name.trim().length >= 2) {
+    const queryText = `${searchParams.name} ${searchParams.topic}`.trim();
+
+    // Trigger live search once the combined query has at least 2 characters
+    if (queryText.length >= 2) {
       debounceTimer.current = setTimeout(() => {
         const params: { department?: string; topic?: string; name?: string } = {};
         if (searchParams.name.trim()) params.name = searchParams.name.trim();
         if (searchParams.topic.trim()) params.topic = searchParams.topic.trim();
         if (searchParams.department.trim()) params.department = searchParams.department.trim();
-        
+
         setHasSearched(true);
         onSearch(params);
-      }, 500); // 500ms debounce delay
-    } else if (searchParams.name.trim().length === 0 && hasSearched) {
-      // If name field is cleared, show all results
+      }, 400); // 400ms debounce delay
+    } else if (queryText.length === 0 && hasSearched) {
+      // If the text fields are cleared, fall back to department filter / all results
       const params: { department?: string; topic?: string; name?: string } = {};
-      if (searchParams.topic.trim()) params.topic = searchParams.topic.trim();
       if (searchParams.department.trim()) params.department = searchParams.department.trim();
       onSearch(params);
     }
@@ -50,7 +52,7 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.name, liveSearch]); // Only trigger on name changes for live search
+  }, [searchParams.name, searchParams.topic, liveSearch]); // Trigger on name or topic changes
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,14 +120,14 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
               display: 'block',
             }}
           >
-            Research Topic/Expertise 
+            Research Topic/Expertise
           </label>
           <input
             id="topic"
             type="text"
             value={searchParams.topic}
             onChange={(e) => setSearchParams(prev => ({ ...prev, topic: e.target.value }))}
-            placeholder="e.g., climate change, marine biology, oceanography"
+            placeholder="e.g., climate change, marine biology (typo-tolerant)"
             style={{
               width: '100%',
               fontSize: 22,

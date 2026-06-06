@@ -1,163 +1,69 @@
 // API Configuration
-// For local development, use localhost:3001 (backend runs on 3001 to avoid conflict with Next.js on 3000)
-// For production, uncomment the production URLs below and comment out localhost
-
-// Local development
-// const API_BASE_URL = 'http://localhost:3001';
-// Production (uncomment when deploying)
-const API_BASE_URL = 'https://api.research-profiles.grit.ucsb.edu';
+// The backend base URL is read from NEXT_PUBLIC_API_BASE_URL. Next.js loads this
+// automatically per environment:
+//   - `next dev`              -> .env.development (http://localhost:3001)
+//   - `next build` / `start`  -> .env.production  (https://api.research-profiles.grit.ucsb.edu)
+// Override locally without touching committed files by adding .env.local.
+// The fallback below keeps things working (prod) even if no env file is present.
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://api.research-profiles.grit.ucsb.edu';
 
 const API_BASE = `${API_BASE_URL}/api/faculty`;
-const API_SUMMARY_BASE = `${API_BASE_URL}/api/faculty-summary`;
+const API_SUMMARY_BASE = `${API_BASE_URL}/api/faculty-summaries`;
+
+// Unified fuzzy, typo-tolerant search. Hits the backend's pg_trgm-powered
+// /api/faculty/search endpoint, which ranks matches across name, topics,
+// research areas, department, summaries, and keywords. Returns [] on no match.
+export async function searchFaculty(
+  query: string,
+  { limit = 100, offset = 0 }: { limit?: number; offset?: number } = {}
+) {
+  const url = new URL(`${API_BASE}/search`);
+  url.searchParams.append('q', query);
+  url.searchParams.append('limit', String(limit));
+  url.searchParams.append('offset', String(offset));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  return res.json(); // results already sorted by relevance (rank desc)
+}
 
 export async function fetchFaculty(params: { department?: string; topic?: string; name?: string } = {}) {
   try {
-    // Count how many parameters we have
-    const paramCount = Object.values(params).filter(val => val && val.trim()).length;
-    
-    // If we have multiple parameters, try to use the most specific endpoint
-    if (paramCount >= 2) {
-      // If we have all three: department + topic + name (backend dept-topic is broken, use client-side)
-      if (params.department && params.topic && params.name) {
-        console.log('Searching by dept+topic+name (client-side filter)');
+    // Combine the free-text fields (name + topic) into a single fuzzy query.
+    // The department dropdown is treated as an exact, post-search filter.
+    const query = [params.name, params.topic]
+      .map(v => v?.trim())
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    // No free-text query: department-only filter, or all faculty.
+    if (!query) {
+      if (params.department && params.department.trim()) {
         const url = new URL(`${API_BASE}/department`);
-        url.searchParams.append('department', params.department);
+        url.searchParams.append('department', params.department.trim());
+        console.log('Filtering by department:', url.toString());
         const res = await fetch(url.toString());
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const results = await res.json();
-        
-        // Filter by name and topic on the client side
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const filteredResults = results.filter((faculty: any) => {
-          const nameMatch = faculty.name.toLowerCase().includes(params.name!.toLowerCase());
-          const topicMatch = (
-            (faculty.research_areas && faculty.research_areas.toLowerCase().includes(params.topic!.toLowerCase())) ||
-            (faculty.specialization && faculty.specialization.toLowerCase().includes(params.topic!.toLowerCase())) ||
-            (faculty.title && faculty.title.toLowerCase().includes(params.topic!.toLowerCase()))
-          );
-          return nameMatch && topicMatch;
-        });
-        return filteredResults;
+        return res.json();
       }
-      
-      // If we have both department and topic (backend dept-topic is broken, use client-side)
-      if (params.department && params.topic) {
-        console.log('Searching by dept+topic (client-side filter)');
-        const url = new URL(`${API_BASE}/department`);
-        url.searchParams.append('department', params.department);
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const results = await res.json();
-        
-        // Filter by topic on the client side
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const filteredResults = results.filter((faculty: any) => {
-          const topicMatch = (
-            (faculty.research_areas && faculty.research_areas.toLowerCase().includes(params.topic!.toLowerCase())) ||
-            (faculty.specialization && faculty.specialization.toLowerCase().includes(params.topic!.toLowerCase())) ||
-            (faculty.title && faculty.title.toLowerCase().includes(params.topic!.toLowerCase()))
-          );
-          return topicMatch;
-        });
-        return filteredResults;
-      }
-      
-      // If we have name and department, try department first then filter by name
-      if (params.name && params.department) {
-        const url = new URL(`${API_BASE}/department`);
-        url.searchParams.append('department', params.department);
-        console.log('Searching with department endpoint for name+dept:', url.toString());
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const results = await res.json();
-        
-        // Filter by name on the client side
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const filteredResults = results.filter((faculty: any) => 
-          faculty.name.toLowerCase().includes(params.name!.toLowerCase())
-        );
-        return filteredResults;
-      }
-      
-      // If we have name and topic, filter client-side (backend topic endpoint is broken)
-      if (params.name && params.topic) {
-        console.log('Searching by name+topic (client-side filter)');
-        const res = await fetch(API_BASE);
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const allFaculty = await res.json();
-        
-        // Filter by both name and topic on the client side
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const filteredResults = allFaculty.filter((faculty: any) => {
-          const nameMatch = faculty.name.toLowerCase().includes(params.name!.toLowerCase());
-          const topicMatch = (
-            (faculty.research_areas && faculty.research_areas.toLowerCase().includes(params.topic!.toLowerCase())) ||
-            (faculty.specialization && faculty.specialization.toLowerCase().includes(params.topic!.toLowerCase())) ||
-            (faculty.title && faculty.title.toLowerCase().includes(params.topic!.toLowerCase()))
-          );
-          return nameMatch && topicMatch;
-        });
-        return filteredResults;
-      }
-    }
-    
-    // Single parameter searches
-    if (params.department && !params.topic && !params.name) {
-      const url = new URL(`${API_BASE}/department`);
-      url.searchParams.append('department', params.department);
-      console.log('Searching with department endpoint:', url.toString());
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      return res.json();
-    }
-    
-    if (params.topic && !params.department && !params.name) {
-      // Try keyword-based search first (uses faculty-summary endpoint)
-      console.log('Searching by topic/keyword:', params.topic);
-      try {
-        const keywordResults = await searchFacultyByKeywordWithDetails(params.topic);
-        if (keywordResults.length > 0) {
-          console.log(`Found ${keywordResults.length} results via keyword search`);
-          return keywordResults;
-        }
-      } catch (keywordError) {
-        console.warn('Keyword search failed, falling back to client-side filter:', keywordError);
-      }
-      
-      // Fallback: client-side filtering if keyword search fails
-      console.log('Using client-side topic filter');
+      console.log('Fetching all faculty from:', API_BASE);
       const res = await fetch(API_BASE);
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const allFaculty = await res.json();
-      
-      // Filter by topic on client side
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const filteredResults = allFaculty.filter((faculty: any) => {
-        const searchTerm = params.topic!.toLowerCase();
-        // Search in research_areas, specialization, and title
-        return (
-          (faculty.research_areas && faculty.research_areas.toLowerCase().includes(searchTerm)) ||
-          (faculty.specialization && faculty.specialization.toLowerCase().includes(searchTerm)) ||
-          (faculty.title && faculty.title.toLowerCase().includes(searchTerm))
-        );
-      });
-      return filteredResults;
-    }
-    
-    if (params.name && !params.department && !params.topic) {
-      const url = new URL(`${API_BASE}/name`);
-      url.searchParams.append('name', params.name);
-      console.log('Searching with name endpoint:', url.toString());
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       return res.json();
     }
-    
-    // Default: get all faculty
-    console.log('Fetching all faculty from:', API_BASE);
-    const res = await fetch(API_BASE);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    return res.json();
+
+    // Free-text query: use the unified fuzzy search endpoint.
+    console.log('Fuzzy search for:', query);
+    let results = await searchFaculty(query);
+
+    // If a department was explicitly chosen, narrow results to it (exact filter).
+    if (params.department && params.department.trim()) {
+      const dept = params.department.trim().toLowerCase();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      results = results.filter((f: any) => (f.department || '').toLowerCase() === dept);
+    }
+    return results;
   } catch (error) {
     console.error('API Error:', error);
     if (error instanceof Error) {
