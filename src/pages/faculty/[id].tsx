@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { fetchFacultyById, fetchFacultySummaryTextById, fetchFacultyKeywordsById, fetchFacultyBroadKeywordsById } from '../../lib/api';
+import { getUserEmail, isAuthenticated, logout } from '../../lib/auth';
 import Link from 'next/link';
 
 interface FacultyDetail {
@@ -31,6 +32,10 @@ export default function FacultyDetailPage() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [broadKeywords, setBroadKeywords] = useState<string[]>([]);
   const [keywordsLoading, setKeywordsLoading] = useState(false);
+  // Whether the signed-in user owns this profile, and whether anyone is signed in.
+  // Computed after mount (reads localStorage) to avoid SSR/hydration mismatch.
+  const [isOwner, setIsOwner] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === 'string') {
@@ -41,6 +46,15 @@ export default function FacultyDetailPage() {
         .finally(() => setLoading(false));
     }
   }, [id, router.asPath]); // Also depend on router.asPath to refetch when navigating back
+
+  // Determine ownership once faculty data and the local session are available.
+  useEffect(() => {
+    const email = getUserEmail();
+    setAuthed(isAuthenticated());
+    setIsOwner(
+      !!email && !!faculty?.email && email.toLowerCase() === faculty.email.toLowerCase()
+    );
+  }, [faculty]);
 
   // Fetch AI-generated summary, keywords, and broad keywords
   useEffect(() => {
@@ -710,51 +724,85 @@ export default function FacultyDetailPage() {
               margin: '1.5rem 0',
             }} />
 
-            {/* Update your profile */}
+            {/* Owner: edit link + sign out. Otherwise: sign in to edit. */}
             <div>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Build Google OAuth URL
-                  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-                  if (!clientId) {
-                    alert('Google OAuth not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.');
-                    return;
-                  }
+              {isOwner ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Link
+                    href={`/faculty/${faculty.id}/edit`}
+                    style={{
+                      color: 'var(--ucsb-aqua)',
+                      textDecoration: 'none',
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      padding: '0.5rem 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    Edit your profile
+                    <span style={{ fontSize: '12px' }}>▶</span>
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); logout(); }}
+                    style={{
+                      color: 'var(--ucsb-body-text)',
+                      textDecoration: 'none',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Sign out
+                  </a>
+                </div>
+              ) : (
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Build Google OAuth URL
+                    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+                    if (!clientId) {
+                      alert('Google OAuth not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.');
+                      return;
+                    }
 
-                  const redirectUri = `${window.location.origin}/auth/callback`;
-                  const scope = 'openid email profile';
-                  const state = btoa(JSON.stringify({
-                    redirectUrl: `/faculty/${faculty.id}`,
-                    facultyId: faculty.id.toString()
-                  }));
+                    const redirectUri = `${window.location.origin}/auth/callback`;
+                    const scope = 'openid email profile';
+                    const state = btoa(JSON.stringify({
+                      redirectUrl: `/faculty/${faculty.id}`,
+                      facultyId: faculty.id.toString()
+                    }));
 
-                  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-                  authUrl.searchParams.set('client_id', clientId);
-                  authUrl.searchParams.set('redirect_uri', redirectUri);
-                  authUrl.searchParams.set('response_type', 'token'); // Using implicit flow for client-side
-                  authUrl.searchParams.set('scope', scope);
-                  authUrl.searchParams.set('state', state);
+                    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+                    authUrl.searchParams.set('client_id', clientId);
+                    authUrl.searchParams.set('redirect_uri', redirectUri);
+                    authUrl.searchParams.set('response_type', 'token'); // Using implicit flow for client-side
+                    authUrl.searchParams.set('scope', scope);
+                    authUrl.searchParams.set('hd', 'ucsb.edu'); // Hint: UCSB Workspace accounts
+                    authUrl.searchParams.set('state', state);
 
-                  // Redirect to Google OAuth
-                  window.location.href = authUrl.toString();
-                }}
-                style={{
-                  color: 'var(--ucsb-aqua)',
-                  textDecoration: 'none',
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  padding: '0.5rem 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Update your profile
-                <span style={{ fontSize: '12px' }}>▶</span>
-              </a>
+                    // Redirect to Google OAuth
+                    window.location.href = authUrl.toString();
+                  }}
+                  style={{
+                    color: 'var(--ucsb-aqua)',
+                    textDecoration: 'none',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    padding: '0.5rem 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {authed ? 'Sign in as the owner to edit' : 'Update your profile'}
+                  <span style={{ fontSize: '12px' }}>▶</span>
+                </a>
+              )}
             </div>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import { getAccessToken } from './auth';
+
 // API Configuration
 // The backend base URL is read from NEXT_PUBLIC_API_BASE_URL. Next.js loads this
 // automatically per environment:
@@ -153,10 +155,13 @@ export async function updateFaculty(
   console.groupEnd();
   
   try {
+    // The backend verifies this Google access token server-side and derives the
+    // owner's email from it — the X-User-Email header is no longer trusted.
     const fetchOptions = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAccessToken() ?? ''}`,
         'X-User-Email': userEmail,
       },
       body: requestBody,
@@ -341,6 +346,31 @@ export async function fetchFacultyBroadKeywordsById(id: number) {
     console.error('Faculty Broad Keywords API Error:', error);
     return { broad_keywords: [] };
   }
+}
+
+// Update the AI-generated content (owner-only; backend verifies the Bearer token
+// and that the caller owns this faculty profile). Only the provided fields change.
+export async function updateFacultySummary(
+  id: number,
+  updates: { summary?: string; keywords?: string[]; broad_keywords?: string[] }
+) {
+  const res = await fetch(`${API_SUMMARY_BASE}/id/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAccessToken() ?? ''}`,
+    },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    let message = `HTTP ${res.status}: ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch { /* non-JSON error body */ }
+    throw new Error(message);
+  }
+  return res.json();
 }
 
 // Get broad keywords for a department

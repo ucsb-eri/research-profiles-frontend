@@ -43,3 +43,13 @@ export function clearAuth(): void {
 export function isAuthenticated(): boolean {
   return getUserEmail() !== null;
 }
+
+/**
+ * Sign the user out: clear stored auth and return to the home page.
+ */
+export function logout(): void {
+  clearAuth();
+  if (typeof window !== 'undefined') {
+    window.location.href = '/';
+  }
+}

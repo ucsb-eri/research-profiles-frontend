@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { fetchFacultyById, updateFaculty } from '../../../lib/api';
+import {
+  fetchFacultyById,
+  updateFaculty,
+  updateFacultySummary,
+  fetchFacultySummaryTextById,
+  fetchFacultyKeywordsById,
+  fetchFacultyBroadKeywordsById,
+} from '../../../lib/api';
 import { getUserEmail } from '../../../lib/auth';
 import Link from 'next/link';
 
@@ -36,6 +43,10 @@ export default function FacultyEditPage() {
     office: '',
     website: '',
     profile_url: '',
+    // AI-generated content
+    summary: '',
+    keywords: '',        // comma-separated in the UI
+    broad_keywords: '',  // comma-separated in the UI
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -61,35 +72,48 @@ export default function FacultyEditPage() {
     
     // Fetch faculty data
     if (id && typeof id === 'string') {
-      fetchFacultyById(parseInt(id))
-        .then((facultyData) => {
+      const facultyId = parseInt(id);
+      (async () => {
+        try {
+          const facultyData = await fetchFacultyById(facultyId);
           setFaculty(facultyData);
+
           // Check if user email matches faculty email
           // Allow brian_kim@ucsb.edu to edit any profile for testing
           const isTestEmail = email.toLowerCase() === 'brian_kim@ucsb.edu';
           const emailMatches = facultyData.email && email.toLowerCase() === facultyData.email.toLowerCase();
-          
+
           if (isTestEmail || emailMatches) {
             setAuthorized(true);
-            // Initialize form data
+
+            // Load the AI-generated content to prefill its fields
+            const [summaryRes, keywordsRes, broadRes] = await Promise.all([
+              fetchFacultySummaryTextById(facultyId),
+              fetchFacultyKeywordsById(facultyId),
+              fetchFacultyBroadKeywordsById(facultyId),
+            ]);
+
             setFormData({
               specialization: facultyData.specialization || '',
-              research_areas: Array.isArray(facultyData.research_areas) 
-                ? facultyData.research_areas.join('\n') 
+              research_areas: Array.isArray(facultyData.research_areas)
+                ? facultyData.research_areas.join('\n')
                 : (facultyData.research_areas || ''),
               email: facultyData.email || '',
               office: facultyData.office || '',
               website: facultyData.website || '',
               profile_url: facultyData.profile_url || '',
+              summary: summaryRes?.summary || '',
+              keywords: Array.isArray(keywordsRes?.keywords) ? keywordsRes.keywords.join(', ') : '',
+              broad_keywords: Array.isArray(broadRes?.broad_keywords) ? broadRes.broad_keywords.join(', ') : '',
             });
           }
           // If not authorized, leave authorized as false to show unauthorized view
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load profile');
+        } finally {
           setLoading(false);
-        })
-        .catch((err) => {
-          setError(err.message);
-          setLoading(false);
-        });
+        }
+      })();
     }
   }, [id, router.query]);
 
@@ -302,15 +326,32 @@ export default function FacultyEditPage() {
                 updates.profile_url = formData.profile_url.trim();
               }
 
-              await updateFaculty(faculty.id, updates, userEmail);
+              // Save profile fields (only if any were provided) and AI content.
+              if (Object.keys(updates).length > 0) {
+                await updateFaculty(faculty.id, updates, userEmail);
+              }
+              await updateFacultySummary(faculty.id, {
+                summary: formData.summary.trim(),
+                keywords: formData.keywords.split(',').map(k => k.trim()).filter(Boolean),
+                broad_keywords: formData.broad_keywords.split(',').map(k => k.trim()).filter(Boolean),
+              });
+
               setSaveSuccess(true);
-              
+
               // Redirect to profile page after 2 seconds
               setTimeout(() => {
                 router.push(`/faculty/${faculty.id}`);
               }, 2000);
             } catch (err) {
-              setSaveError(err instanceof Error ? err.message : 'Failed to update profile');
+              const msg = err instanceof Error ? err.message : 'Failed to update profile';
+              // Give clearer guidance for the common auth failures.
+              if (/401/.test(msg) || /token/i.test(msg)) {
+                setSaveError('Your session expired. Please sign in again and retry.');
+              } else if (/403/.test(msg) || /own profile/i.test(msg)) {
+                setSaveError('You can only edit your own profile.');
+              } else {
+                setSaveError(msg);
+              }
             } finally {
               setSaving(false);
             }
@@ -375,6 +416,108 @@ export default function FacultyEditPage() {
                 resize: 'vertical',
               }}
               placeholder="Enter research areas, one per line..."
+            />
+          </div>
+
+          {/* AI-generated content (owner-editable) */}
+          <div style={{
+            borderTop: '2px solid #e5e7eb',
+            paddingTop: '1.5rem',
+            marginBottom: '1.5rem',
+          }}>
+            <h2 style={{
+              fontSize: '20px',
+              fontWeight: 800,
+              color: 'var(--ucsb-navy)',
+              margin: '0 0 0.25rem 0',
+              fontFamily: 'Nunito Sans, sans-serif',
+            }}>
+              AI-Generated Content
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--ucsb-body-text)', margin: '0 0 1rem 0' }}>
+              Review and correct the auto-generated summary and keywords for your profile.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '16px',
+              fontWeight: 700,
+              color: 'var(--ucsb-navy)',
+              marginBottom: '0.5rem',
+              fontFamily: 'Nunito Sans, sans-serif',
+            }}>
+              Research Summary
+            </label>
+            <textarea
+              value={formData.summary}
+              onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+              rows={6}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '16px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontFamily: 'Nunito Sans, sans-serif',
+                resize: 'vertical',
+              }}
+              placeholder="A short paragraph summarizing your research..."
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '16px',
+              fontWeight: 700,
+              color: 'var(--ucsb-navy)',
+              marginBottom: '0.5rem',
+              fontFamily: 'Nunito Sans, sans-serif',
+            }}>
+              Research Keywords (comma-separated)
+            </label>
+            <input
+              type="text"
+              value={formData.keywords}
+              onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '16px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontFamily: 'Nunito Sans, sans-serif',
+              }}
+              placeholder="e.g., machine learning, robotics, computer vision"
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '16px',
+              fontWeight: 700,
+              color: 'var(--ucsb-navy)',
+              marginBottom: '0.5rem',
+              fontFamily: 'Nunito Sans, sans-serif',
+            }}>
+              Broad Keywords (comma-separated)
+            </label>
+            <input
+              type="text"
+              value={formData.broad_keywords}
+              onChange={(e) => setFormData({ ...formData, broad_keywords: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '16px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontFamily: 'Nunito Sans, sans-serif',
+              }}
+              placeholder="e.g., artificial intelligence, automation"
             />
           </div>
 
