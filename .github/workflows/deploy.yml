@@ -46,6 +46,26 @@ jobs:
           source: "*,!.git,!.github,!.gitignore"
           target: /home/research-profiles/production/research-profiles-frontend
           rm: true
+      - name: write environment file
+        uses: appleboy/ssh-action@v1
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+        with:
+          host: ${{ vars.HOST }}
+          username: ${{ vars.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # NEXT_PUBLIC_* are baked in at build time, so this file must exist
+          # before `npm run build` below. .env.production.local has the highest
+          # precedence and overrides the committed .env.production.
+          envs: NEXT_PUBLIC_API_BASE_URL,NEXT_PUBLIC_GOOGLE_CLIENT_ID
+          script: |
+            cd /home/research-profiles/production/research-profiles-frontend
+            umask 077
+            {
+              [ -n "$NEXT_PUBLIC_API_BASE_URL" ] && printf 'NEXT_PUBLIC_API_BASE_URL=%s\n' "$NEXT_PUBLIC_API_BASE_URL"
+              [ -n "$NEXT_PUBLIC_GOOGLE_CLIENT_ID" ] && printf 'NEXT_PUBLIC_GOOGLE_CLIENT_ID=%s\n' "$NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+            } > .env.production.local
       - name: install dependencies
         uses: appleboy/ssh-action@v1
         with:
