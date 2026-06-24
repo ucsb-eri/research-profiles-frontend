@@ -28,6 +28,7 @@ export default function FacultyDetailPage() {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
+  const [summaryOwnerEdited, setSummaryOwnerEdited] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [broadKeywords, setBroadKeywords] = useState<string[]>([]);
@@ -67,6 +68,7 @@ export default function FacultyDetailPage() {
         .then((data) => {
           if (data && data.summary) {
             setSummary(data.summary);
+            setSummaryOwnerEdited(!!data.owner_edited);
           }
         })
         .catch((err) => {
@@ -384,7 +386,7 @@ export default function FacultyDetailPage() {
                 marginBottom: '1rem',
                 fontFamily: 'Nunito Sans, sans-serif',
               }}>
-                AI-Generated Research Summary
+                {summaryOwnerEdited ? 'Research Summary' : 'AI-Generated Research Summary'}
               </h2>
               
               {summaryLoading && (
@@ -425,13 +427,13 @@ export default function FacultyDetailPage() {
                   }}>
                     <span style={{
                       fontSize: '24px',
-                    }}>🤖</span>
+                    }}>{summaryOwnerEdited ? '✏️' : '🤖'}</span>
                     <span style={{
                       fontSize: '14px',
                       fontWeight: 600,
                       color: 'var(--ucsb-aqua)',
                     }}>
-                      AI-Generated Content
+                      {summaryOwnerEdited ? 'Edited by the faculty member' : 'AI-Generated Content'}
                     </span>
                   </div>
                   {summary}
