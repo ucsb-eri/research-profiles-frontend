@@ -1,19 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fetchDivisions, DivisionGroup } from '../lib/api';
+
+type SearchParams = { department?: string; topic?: string; name?: string; division?: string };
 
 interface SearchBarProps {
-  onSearch: (params: { department?: string; topic?: string; name?: string }) => void;
+  onSearch: (params: SearchParams) => void;
   isLoading?: boolean;
   liveSearch?: boolean; // Enable live search (search-as-you-type)
 }
+
+// The dropdown holds both departments (plain value) and "All <division>" entries
+// (value prefixed so we can tell them apart on change).
+const DIVISION_PREFIX = 'div:';
 
 export default function FacultySearchBar({ onSearch, isLoading = false, liveSearch = true }: SearchBarProps) {
   const [searchParams, setSearchParams] = useState({
     topic: '',
     name: '',
-    department: ''
+    department: '',
+    division: ''
   });
+  const [divisions, setDivisions] = useState<DivisionGroup[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Load the division/department list for the dropdown once on mount.
+  useEffect(() => {
+    fetchDivisions()
+      .then(setDivisions)
+      .catch((err) => console.error('Failed to load divisions:', err));
+  }, []);
 
   // Live search effect - triggers fuzzy search-as-you-type after the user
   // stops typing for 400ms. Watches both the name and topic/expertise fields.
@@ -30,18 +46,20 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
     // Trigger live search once the combined query has at least 2 characters
     if (queryText.length >= 2) {
       debounceTimer.current = setTimeout(() => {
-        const params: { department?: string; topic?: string; name?: string } = {};
+        const params: SearchParams = {};
         if (searchParams.name.trim()) params.name = searchParams.name.trim();
         if (searchParams.topic.trim()) params.topic = searchParams.topic.trim();
         if (searchParams.department.trim()) params.department = searchParams.department.trim();
+        if (searchParams.division.trim()) params.division = searchParams.division.trim();
 
         setHasSearched(true);
         onSearch(params);
       }, 400); // 400ms debounce delay
     } else if (queryText.length === 0 && hasSearched) {
-      // If the text fields are cleared, fall back to department filter / all results
-      const params: { department?: string; topic?: string; name?: string } = {};
+      // If the text fields are cleared, fall back to department/division filter / all results
+      const params: SearchParams = {};
       if (searchParams.department.trim()) params.department = searchParams.department.trim();
+      if (searchParams.division.trim()) params.division = searchParams.division.trim();
       onSearch(params);
     }
 
@@ -58,17 +76,18 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
     e.preventDefault();
     
     // Only include non-empty parameters
-    const params: { department?: string; topic?: string; name?: string } = {};
+    const params: SearchParams = {};
     if (searchParams.topic.trim()) params.topic = searchParams.topic.trim();
     if (searchParams.name.trim()) params.name = searchParams.name.trim();
     if (searchParams.department.trim()) params.department = searchParams.department.trim();
-    
+    if (searchParams.division.trim()) params.division = searchParams.division.trim();
+
     setHasSearched(true);
     onSearch(params);
   };
 
   const handleClear = () => {
-    setSearchParams({ topic: '', name: '', department: '' });
+    setSearchParams({ topic: '', name: '', department: '', division: '' });
     setHasSearched(false);
     onSearch({}); // Reset to show all faculty
   };
@@ -208,25 +227,34 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
               display: 'block',
             }}
           >
-            Department
+            Department / Division
           </label>
           <select
             id="department"
-            value={searchParams.department}
-            onChange={(e) => setSearchParams(prev => ({ ...prev, department: e.target.value }))}
+            value={searchParams.division ? DIVISION_PREFIX + searchParams.division : searchParams.department}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val.startsWith(DIVISION_PREFIX)) {
+                // "All <division>" selected: filter by division, clear department.
+                setSearchParams(prev => ({ ...prev, division: val.slice(DIVISION_PREFIX.length), department: '' }));
+              } else {
+                // A specific department (or "All Departments"): clear division.
+                setSearchParams(prev => ({ ...prev, department: val, division: '' }));
+              }
+            }}
             style={{
               width: '100%',
               fontSize: 18,
               padding: '0.8em 1.2em',
-              border: searchParams.department ? '2px solid var(--ucsb-navy)' : '2px solid #bfc9d1',
+              border: (searchParams.department || searchParams.division) ? '2px solid var(--ucsb-navy)' : '2px solid #bfc9d1',
               borderRadius: 6,
               fontFamily: 'Nunito Sans, sans-serif',
               boxSizing: 'border-box',
               height: 64,
               marginBottom: 0,
-              backgroundColor: searchParams.department ? '#f8f9ff' : 'white',
-              color: searchParams.department ? 'var(--ucsb-navy)' : '#374151',
-              fontWeight: searchParams.department ? '600' : '400',
+              backgroundColor: (searchParams.department || searchParams.division) ? '#f8f9ff' : 'white',
+              color: (searchParams.department || searchParams.division) ? 'var(--ucsb-navy)' : '#374151',
+              fontWeight: (searchParams.department || searchParams.division) ? '600' : '400',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               transition: 'border-color 0.2s, background-color 0.2s',
@@ -240,18 +268,14 @@ export default function FacultySearchBar({ onSearch, isLoading = false, liveSear
             }}
           >
             <option value="">All Departments</option>
-            <option value="Black Studies">Black Studies</option>
-            <option value="Earth Science">Earth Science</option>
-            <option value="Ecology, Evolution, and Marine Biology">Ecology, Evolution, and Marine Biology</option>
-            <option value="Economics">Economics</option>
-            <option value="Geography">Geography</option>
-            <option value="Marine Science Graduate Program">Marine Science Graduate Program</option>
-            <option value="Physics">Physics</option>
-            <option value="Electrical and Computer Engineering">Electrical and Computer Engineering</option>
-            <option value="Anthropology">Anthropology</option>
-            <option value="Asian American Studies">Asian American Studies</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="English">English</option>
+            {divisions.map(group => (
+              <optgroup key={group.division} label={group.division}>
+                <option value={DIVISION_PREFIX + group.division}>All {group.division}</option>
+                {group.departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </optgroup>
+            ))}
           </select>
 
         </div>

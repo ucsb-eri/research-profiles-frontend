@@ -90,7 +90,7 @@ export interface FacultyPage {
 // total match count (read from the X-Total-Count response header). Same three
 // modes as fetchFaculty — all faculty, department filter, fuzzy search.
 export async function fetchFacultyPage(
-  params: { department?: string; topic?: string; name?: string } = {},
+  params: { department?: string; topic?: string; name?: string; division?: string } = {},
   { limit = 24, offset = 0 }: { limit?: number; offset?: number } = {}
 ): Promise<FacultyPage> {
   const query = [params.name, params.topic]
@@ -99,14 +99,16 @@ export async function fetchFacultyPage(
     .join(' ')
     .trim();
   const dept = params.department?.trim();
+  const division = params.division?.trim();
 
   // Free-text query -> fuzzy search endpoint (server-paginated, sends X-Total-Count).
   if (query) {
-    // When a department also refines the results we filter client-side, which
-    // can't be server-paginated — so pull a single larger page (matching the
-    // old behavior) instead of a scroll page.
-    const searchLimit = dept ? 100 : limit;
-    const searchOffset = dept ? 0 : offset;
+    // A department or division also refines results client-side, which can't be
+    // server-paginated — so pull a single larger page (matching the old
+    // behavior) instead of a scroll page.
+    const refine = dept || division;
+    const searchLimit = refine ? 100 : limit;
+    const searchOffset = refine ? 0 : offset;
     const url = new URL(`${API_BASE}/search`);
     url.searchParams.set('q', query);
     url.searchParams.set('limit', String(searchLimit));
@@ -117,15 +119,28 @@ export async function fetchFacultyPage(
     let data: any[] = await res.json();
     const headerTotal = Number(res.headers.get('X-Total-Count'));
 
-    // A chosen department refines results client-side, which breaks server-side
-    // paging (the header total counts unfiltered matches), so treat it as a
-    // single non-paginated page.
     if (dept) {
       const d = dept.toLowerCase();
       data = data.filter(f => (f.department || '').toLowerCase() === d);
       return { data, total: data.length, paginated: false };
     }
+    if (division) {
+      const d = division.toLowerCase();
+      data = data.filter(f => (f.division || '').toLowerCase() === d);
+      return { data, total: data.length, paginated: false };
+    }
     return { data, total: Number.isNaN(headerTotal) ? data.length : headerTotal, paginated: true };
+  }
+
+  // Division filter: backend returns every faculty member in the division.
+  if (division) {
+    const url = new URL(`${API_BASE}/division`);
+    url.searchParams.set('division', division);
+    const res = await fetch(url.toString());
+    if (res.status === 404) return { data: [], total: 0, paginated: false };
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    return { data, total: data.length, paginated: false };
   }
 
   // Department-only filter: backend returns the whole department in one shot.
@@ -340,6 +355,23 @@ export async function fetchAllDepartments() {
   } catch (error) {
     console.error('Departments API Error:', error);
     throw new Error('Failed to fetch departments');
+  }
+}
+
+export interface DivisionGroup {
+  division: string;
+  departments: string[];
+}
+
+// Divisions with their departments, for the grouped filter dropdown.
+export async function fetchDivisions(): Promise<DivisionGroup[]> {
+  try {
+    const res = await fetch(`${API_BASE}/alldivisions`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    return res.json();
+  } catch (error) {
+    console.error('Divisions API Error:', error);
+    throw new Error('Failed to fetch divisions');
   }
 }
 

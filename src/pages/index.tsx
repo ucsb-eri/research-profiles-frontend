@@ -7,7 +7,7 @@ import { fetchFacultyPage } from '../lib/api';
 // How many faculty to request per page as the user scrolls.
 const PAGE_SIZE = 24;
 
-type SearchParams = { department?: string; topic?: string; name?: string };
+type SearchParams = { department?: string; topic?: string; name?: string; division?: string };
 
 // Backend faculty type
 interface BackendFaculty {
@@ -22,6 +22,7 @@ interface BackendFaculty {
   photo_url?: string;
   research_areas?: string[]; // Now an array instead of string
   department: string;
+  division?: string;
   profile_url?: string;
   rank?: number; // Relevance score (0-1) from the fuzzy search endpoint
 }
