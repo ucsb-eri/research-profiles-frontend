@@ -9,7 +9,7 @@ import {
   fetchFacultyBroadKeywordsById,
   resetFacultySummaryToAI,
 } from '../../../lib/api';
-import { getUserEmail } from '../../../lib/auth';
+import { getUserEmail, isSessionValid, clearAuth, loginWithGoogle } from '../../../lib/auth';
 import Link from 'next/link';
 
 interface FacultyDetail {
@@ -55,6 +55,13 @@ export default function FacultyEditPage() {
   // Whether the blurb is currently owner-edited (vs. AI-managed), and reset state.
   const [ownerEdited, setOwnerEdited] = useState(false);
   const [resetting, setResetting] = useState(false);
+  // Set when a request fails with an expired token so we can offer re-login.
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  const promptReLogin = () => {
+    clearAuth();
+    loginWithGoogle({ redirectUrl: `/faculty/${id}/edit`, facultyId: typeof id === 'string' ? id : undefined });
+  };
 
   useEffect(() => {
     // Debug logging
@@ -63,15 +70,18 @@ export default function FacultyEditPage() {
     console.log('Router query:', router.query);
     console.log('Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
     
-    // Check authentication
+    // Check authentication. A stored email isn't enough — the Google access
+    // token expires (~1h), so a sign-in from days ago is stale. If there's no
+    // valid session, send the user back through Google sign-in, returning to
+    // this edit page, instead of letting the save fail later with a 401.
     const email = getUserEmail();
     console.log('User email:', email);
     setUserEmail(email);
-    
-    if (!email) {
-      setError('Please sign in to edit your profile');
-      setLoading(false);
-      return;
+
+    if (!isSessionValid()) {
+      clearAuth(); // drop any stale token so we don't loop on it
+      loginWithGoogle({ redirectUrl: `/faculty/${id}/edit`, facultyId: typeof id === 'string' ? id : undefined });
+      return; // navigating to Google; keep the loading state
     }
     
     // Fetch faculty data
@@ -82,10 +92,12 @@ export default function FacultyEditPage() {
           const facultyData = await fetchFacultyById(facultyId);
           setFaculty(facultyData);
 
-          // Check if user email matches faculty email
-          // Allow brian_kim@ucsb.edu to edit any profile for testing
-          const isTestEmail = email.toLowerCase() === 'brian_kim@ucsb.edu';
-          const emailMatches = facultyData.email && email.toLowerCase() === facultyData.email.toLowerCase();
+          // Check if user email matches faculty email (email is guaranteed
+          // present here — isSessionValid() above requires it).
+          // Allow brian_kim@ucsb.edu to edit any profile for testing.
+          const emailLc = (email ?? '').toLowerCase();
+          const isTestEmail = emailLc === 'brian_kim@ucsb.edu';
+          const emailMatches = !!facultyData.email && emailLc === facultyData.email.toLowerCase();
 
           if (isTestEmail || emailMatches) {
             setAuthorized(true);
@@ -133,7 +145,8 @@ export default function FacultyEditPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to reset to AI';
       if (/401/.test(msg) || /token/i.test(msg)) {
-        setSaveError('Your session expired. Please sign in again and retry.');
+        setSessionExpired(true);
+        setSaveError('Your session expired.');
       } else {
         setSaveError(msg);
       }
@@ -300,10 +313,35 @@ export default function FacultyEditPage() {
             borderRadius: '8px',
             padding: '1rem',
             marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
           }}>
             <p style={{ fontSize: '14px', color: '#721c24', margin: 0, fontWeight: 600 }}>
-              ✗ Error: {saveError}
+              ✗ {sessionExpired ? `${saveError} Please sign in again to continue.` : `Error: ${saveError}`}
             </p>
+            {sessionExpired && (
+              <button
+                type="button"
+                onClick={promptReLogin}
+                style={{
+                  background: 'var(--ucsb-navy)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.5rem 1rem',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Sign in again
+              </button>
+            )}
           </div>
         )}
 
@@ -371,7 +409,8 @@ export default function FacultyEditPage() {
               const msg = err instanceof Error ? err.message : 'Failed to update profile';
               // Give clearer guidance for the common auth failures.
               if (/401/.test(msg) || /token/i.test(msg)) {
-                setSaveError('Your session expired. Please sign in again and retry.');
+                setSessionExpired(true);
+                setSaveError('Your session expired.');
               } else if (/403/.test(msg) || /own profile/i.test(msg)) {
                 setSaveError('You can only edit your own profile.');
               } else {

@@ -15,6 +15,7 @@ export default function AuthCallback() {
         const params = new URLSearchParams(hash || window.location.search);
         
         const accessToken = params.get('access_token');
+        const expiresIn = params.get('expires_in'); // seconds until the token expires
         const error = params.get('error');
         const state = params.get('state');
 
@@ -63,6 +64,10 @@ export default function AuthCallback() {
         localStorage.setItem('user_email', userInfo.email);
         localStorage.setItem('user_name', userInfo.name);
         localStorage.setItem('access_token', accessToken);
+        // Record when the token expires so the app can detect a stale session
+        // and re-prompt login instead of failing at request time (~1h default).
+        const expirySeconds = Number(expiresIn) || 3600;
+        localStorage.setItem('token_expiry', String(Date.now() + expirySeconds * 1000));
 
         // Debug logging before redirect
         console.log('=== AUTH CALLBACK DEBUG ===');
