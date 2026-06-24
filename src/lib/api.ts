@@ -480,6 +480,26 @@ export async function updateFacultySummary(
   return res.json();
 }
 
+// Hand the blurb back to AI: clears the owner-edited flag so the next AI run can
+// refresh it (owner-only; backend verifies the Bearer token + ownership).
+export async function resetFacultySummaryToAI(id: number) {
+  const res = await fetch(`${API_SUMMARY_BASE}/id/${id}/reset-to-ai`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${getAccessToken() ?? ''}`,
+    },
+  });
+  if (!res.ok) {
+    let message = `HTTP ${res.status}: ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch { /* non-JSON error body */ }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 // Get broad keywords for a department
 export async function fetchBroadKeywordsByDepartment(department: string) {
   try {

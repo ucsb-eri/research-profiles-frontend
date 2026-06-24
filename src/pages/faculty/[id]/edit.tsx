@@ -7,6 +7,7 @@ import {
   fetchFacultySummaryTextById,
   fetchFacultyKeywordsById,
   fetchFacultyBroadKeywordsById,
+  resetFacultySummaryToAI,
 } from '../../../lib/api';
 import { getUserEmail } from '../../../lib/auth';
 import Link from 'next/link';
@@ -51,6 +52,9 @@ export default function FacultyEditPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  // Whether the blurb is currently owner-edited (vs. AI-managed), and reset state.
+  const [ownerEdited, setOwnerEdited] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     // Debug logging
@@ -93,6 +97,8 @@ export default function FacultyEditPage() {
               fetchFacultyBroadKeywordsById(facultyId),
             ]);
 
+            setOwnerEdited(!!summaryRes?.owner_edited);
+
             setFormData({
               specialization: facultyData.specialization || '',
               research_areas: Array.isArray(facultyData.research_areas)
@@ -116,6 +122,25 @@ export default function FacultyEditPage() {
       })();
     }
   }, [id, router.query]);
+
+  const handleResetToAI = async () => {
+    if (!faculty) return;
+    setResetting(true);
+    setSaveError(null);
+    try {
+      await resetFacultySummaryToAI(faculty.id);
+      setOwnerEdited(false); // now AI-managed; text refreshes on the next generation run
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to reset to AI';
+      if (/401/.test(msg) || /token/i.test(msg)) {
+        setSaveError('Your session expired. Please sign in again and retry.');
+      } else {
+        setSaveError(msg);
+      }
+    } finally {
+      setResetting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -425,17 +450,54 @@ export default function FacultyEditPage() {
             paddingTop: '1.5rem',
             marginBottom: '1.5rem',
           }}>
-            <h2 style={{
-              fontSize: '20px',
-              fontWeight: 800,
-              color: 'var(--ucsb-navy)',
-              margin: '0 0 0.25rem 0',
-              fontFamily: 'Nunito Sans, sans-serif',
-            }}>
-              AI-Generated Content
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+              <h2 style={{
+                fontSize: '20px',
+                fontWeight: 800,
+                color: 'var(--ucsb-navy)',
+                margin: 0,
+                fontFamily: 'Nunito Sans, sans-serif',
+              }}>
+                AI-Generated Content
+              </h2>
+              {/* Status badge: who currently "owns" the blurb. */}
+              <span style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                padding: '0.2rem 0.6rem',
+                borderRadius: '999px',
+                background: ownerEdited ? '#e8f0fe' : '#eef7ee',
+                color: ownerEdited ? 'var(--ucsb-navy)' : '#1e7e34',
+                border: `1px solid ${ownerEdited ? '#c5d6f7' : '#cfe8cf'}`,
+              }}>
+                {ownerEdited ? '✏️ Edited by you' : '🤖 AI-generated'}
+              </span>
+              {ownerEdited && (
+                <button
+                  type="button"
+                  onClick={handleResetToAI}
+                  disabled={resetting}
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    padding: '0.35rem 0.8rem',
+                    borderRadius: '6px',
+                    border: '2px solid var(--ucsb-navy)',
+                    background: 'transparent',
+                    color: 'var(--ucsb-navy)',
+                    cursor: resetting ? 'not-allowed' : 'pointer',
+                    opacity: resetting ? 0.6 : 1,
+                    fontFamily: 'Nunito Sans, sans-serif',
+                  }}
+                >
+                  {resetting ? 'Resetting…' : 'Reset to AI'}
+                </button>
+              )}
+            </div>
             <p style={{ fontSize: '14px', color: 'var(--ucsb-body-text)', margin: '0 0 1rem 0' }}>
-              Review and correct the auto-generated summary and keywords for your profile.
+              {ownerEdited
+                ? 'You’ve edited this content, so AI generation leaves it untouched. “Reset to AI” lets it be regenerated on the next run.'
+                : 'Review and correct the auto-generated summary and keywords. Saving marks it as edited so AI won’t overwrite your changes.'}
             </p>
           </div>
 
