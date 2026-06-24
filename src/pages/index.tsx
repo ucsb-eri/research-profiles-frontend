@@ -1,8 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import FacultyCard from '../components/FacultyCard';
 import FacultySearchBar from '../components/FacultySearchBar';
-import { fetchFaculty } from '../lib/api';
+import { fetchFacultyPage } from '../lib/api';
+
+// How many faculty to request per page as the user scrolls.
+const PAGE_SIZE = 24;
+
+type SearchParams = { department?: string; topic?: string; name?: string };
 
 // Backend faculty type
 interface BackendFaculty {
@@ -23,40 +28,89 @@ interface BackendFaculty {
 
 export default function HomePage() {
   const [faculty, setFaculty] = useState<BackendFaculty[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState<number | null>(null);
+  const [paginated, setPaginated] = useState(false);
+  const [loading, setLoading] = useState(true);        // first page / new search
+  const [loadingMore, setLoadingMore] = useState(false); // subsequent pages
   const [error, setError] = useState<string | null>(null);
-  const [lastSearchParams, setLastSearchParams] = useState<{ department?: string; topic?: string; name?: string }>({});
+  const [lastSearchParams, setLastSearchParams] = useState<SearchParams>({});
 
-  useEffect(() => {
-    console.log('Initial faculty fetch - this should only run once');
-    setLoading(true);
-    fetchFaculty()
-      .then((results) => {
-        console.log('Faculty data loaded:', results.length, 'faculty members');
-        setFaculty(results);
-      })
-      .catch((err) => {
-        console.error('Faculty fetch error:', err);
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  // Current scroll offset and the params the loaded pages belong to. Kept in
+  // refs so loadMore always reads the latest values without re-subscribing.
+  const offsetRef = useRef(0);
+  const paramsRef = useRef<SearchParams>({});
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const handleSearch = async (params: { department?: string; topic?: string; name?: string }) => {
-    console.log('Search triggered with params:', params);
+  // More to load only in server-paginated modes, until we've reached the total.
+  const hasMore = paginated && (total === null || faculty.length < total);
+
+  // Load the first page for a set of params (initial load or a new search).
+  const loadFirst = useCallback(async (params: SearchParams) => {
     setLoading(true);
     setError(null);
     setLastSearchParams(params);
+    paramsRef.current = params;
+    offsetRef.current = 0;
     try {
-      const results = await fetchFaculty(params);
-      console.log('Search results:', results.length, 'faculty members');
-      setFaculty(results);
+      const page = await fetchFacultyPage(params, { limit: PAGE_SIZE, offset: 0 });
+      setFaculty(page.data);
+      setTotal(page.total);
+      setPaginated(page.paginated);
+      offsetRef.current = page.data.length;
     } catch (err) {
-      console.error('Search error:', err);
+      console.error('Faculty fetch error:', err);
       setError(err instanceof Error ? err.message : 'Search failed');
+      setFaculty([]);
+      setTotal(0);
+      setPaginated(false);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Append the next page at the current offset.
+  const loadMore = useCallback(async () => {
+    if (loadingMore || loading) return;
+    setLoadingMore(true);
+    try {
+      const page = await fetchFacultyPage(paramsRef.current, {
+        limit: PAGE_SIZE,
+        offset: offsetRef.current,
+      });
+      offsetRef.current += page.data.length;
+      // Guard against duplicate keys if a page overlaps a previous one.
+      setFaculty((prev) => {
+        const seen = new Set(prev.map((f) => f.id));
+        return [...prev, ...page.data.filter((f: BackendFaculty) => !seen.has(f.id))];
+      });
+    } catch (err) {
+      console.error('Load more error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load more');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore]);
+
+  // Initial load.
+  useEffect(() => {
+    loadFirst({});
+  }, [loadFirst]);
+
+  // Fire loadMore when the sentinel scrolls near the viewport.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loading) return;
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      { rootMargin: '400px' } // prefetch before it's fully visible
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, loading, loadMore]);
+
+  const handleSearch = (params: SearchParams) => {
+    console.log('Search triggered with params:', params);
+    loadFirst(params);
   };
 
   return (
@@ -132,7 +186,9 @@ export default function HomePage() {
                 textAlign: 'left',
                 fontWeight: 500
               }}>
-                Found {faculty.length} faculty member{faculty.length !== 1 ? 's' : ''}
+                {total !== null && total !== faculty.length
+                  ? `Showing ${faculty.length} of ${total} faculty members`
+                  : `Found ${faculty.length} faculty member${faculty.length !== 1 ? 's' : ''}`}
                 {Object.values(lastSearchParams).some(val => val && val.trim()) && (
                   <span style={{ fontSize: 16, fontWeight: 400, color: '#666', marginLeft: 8 }}>
                     {Object.entries(lastSearchParams)
@@ -184,7 +240,18 @@ export default function HomePage() {
               })}
             </div>
           )}
-          
+
+          {/* Infinite scroll: when this sentinel nears the viewport, load the
+              next page. Only rendered while there are more pages to fetch. */}
+          {!loading && !error && hasMore && (
+            <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+          )}
+          {loadingMore && (
+            <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--ucsb-navy)', fontSize: 18 }}>
+              Loading more…
+            </div>
+          )}
+
           {!loading && !error && faculty.length === 0 && (
             <div style={{ 
               fontSize: 20, 

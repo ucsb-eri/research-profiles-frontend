@@ -75,6 +75,81 @@ export async function fetchFaculty(params: { department?: string; topic?: string
   }
 }
 
+// A page of faculty results plus the total available, for infinite scroll.
+// `paginated` is false for modes the backend returns whole (department filter,
+// or a search refined client-side by department) so the caller knows not to
+// request further offsets.
+export interface FacultyPage {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any[];
+  total: number;
+  paginated: boolean;
+}
+
+// Paginated counterpart to fetchFaculty: returns one page of results and the
+// total match count (read from the X-Total-Count response header). Same three
+// modes as fetchFaculty — all faculty, department filter, fuzzy search.
+export async function fetchFacultyPage(
+  params: { department?: string; topic?: string; name?: string } = {},
+  { limit = 24, offset = 0 }: { limit?: number; offset?: number } = {}
+): Promise<FacultyPage> {
+  const query = [params.name, params.topic]
+    .map(v => v?.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const dept = params.department?.trim();
+
+  // Free-text query -> fuzzy search endpoint (server-paginated, sends X-Total-Count).
+  if (query) {
+    // When a department also refines the results we filter client-side, which
+    // can't be server-paginated — so pull a single larger page (matching the
+    // old behavior) instead of a scroll page.
+    const searchLimit = dept ? 100 : limit;
+    const searchOffset = dept ? 0 : offset;
+    const url = new URL(`${API_BASE}/search`);
+    url.searchParams.set('q', query);
+    url.searchParams.set('limit', String(searchLimit));
+    url.searchParams.set('offset', String(searchOffset));
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let data: any[] = await res.json();
+    const headerTotal = Number(res.headers.get('X-Total-Count'));
+
+    // A chosen department refines results client-side, which breaks server-side
+    // paging (the header total counts unfiltered matches), so treat it as a
+    // single non-paginated page.
+    if (dept) {
+      const d = dept.toLowerCase();
+      data = data.filter(f => (f.department || '').toLowerCase() === d);
+      return { data, total: data.length, paginated: false };
+    }
+    return { data, total: Number.isNaN(headerTotal) ? data.length : headerTotal, paginated: true };
+  }
+
+  // Department-only filter: backend returns the whole department in one shot.
+  if (dept) {
+    const url = new URL(`${API_BASE}/department`);
+    url.searchParams.set('department', dept);
+    const res = await fetch(url.toString());
+    if (res.status === 404) return { data: [], total: 0, paginated: false };
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    return { data, total: data.length, paginated: false };
+  }
+
+  // No filters: all faculty, server-paginated with X-Total-Count.
+  const url = new URL(API_BASE);
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('offset', String(offset));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  const data = await res.json();
+  const headerTotal = Number(res.headers.get('X-Total-Count'));
+  return { data, total: Number.isNaN(headerTotal) ? data.length : headerTotal, paginated: true };
+}
+
 export async function fetchFacultyById(id: number) {
   // Add cache-busting to ensure we get fresh data after updates
   const cacheBuster = `?t=${Date.now()}`;
