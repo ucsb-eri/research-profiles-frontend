@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { fetchAuthMe } from '../../lib/api';
+import { setIsAdmin } from '../../lib/auth';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -68,6 +70,17 @@ export default function AuthCallback() {
         // and re-prompt login instead of failing at request time (~1h default).
         const expirySeconds = Number(expiresIn) || 3600;
         localStorage.setItem('token_expiry', String(Date.now() + expirySeconds * 1000));
+
+        // Resolve admin status from the backend and cache it so the UI can show
+        // edit controls on every profile for admins. Best-effort: a failure here
+        // just means no admin UI; the backend still authorizes writes regardless.
+        try {
+          const me = await fetchAuthMe();
+          setIsAdmin(me.isAdmin);
+        } catch (e) {
+          console.warn('Could not resolve admin status:', e);
+          setIsAdmin(false);
+        }
 
         // Debug logging before redirect
         console.log('=== AUTH CALLBACK DEBUG ===');

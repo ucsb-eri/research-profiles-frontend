@@ -8,8 +8,9 @@ import {
   fetchFacultyKeywordsById,
   fetchFacultyBroadKeywordsById,
   resetFacultySummaryToAI,
+  fetchAuthMe,
 } from '../../../lib/api';
-import { getUserEmail, isSessionValid, clearAuth, loginWithGoogle } from '../../../lib/auth';
+import { getUserEmail, isSessionValid, clearAuth, loginWithGoogle, getIsAdmin, setIsAdmin } from '../../../lib/auth';
 import Link from 'next/link';
 
 interface FacultyDetail {
@@ -35,6 +36,9 @@ export default function FacultyEditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authorized, setAuthorized] = useState(false);
+  // True when the signed-in user is a site admin (may edit any profile). Used to
+  // authorize editing profiles they don't own, and to show the admin banner.
+  const [isAdmin, setIsAdminState] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -92,14 +96,24 @@ export default function FacultyEditPage() {
           const facultyData = await fetchFacultyById(facultyId);
           setFaculty(facultyData);
 
-          // Check if user email matches faculty email (email is guaranteed
-          // present here — isSessionValid() above requires it).
-          // Allow brian_kim@ucsb.edu to edit any profile for testing.
+          // Authorize the edit: the user must own this profile (email matches)
+          // OR be a site admin. Resolve admin status live from the backend so a
+          // freshly-granted admin doesn't need to sign in again; fall back to the
+          // cached flag if that call fails. The backend re-checks on every write.
           const emailLc = (email ?? '').toLowerCase();
-          const isTestEmail = emailLc === 'brian_kim@ucsb.edu';
           const emailMatches = !!facultyData.email && emailLc === facultyData.email.toLowerCase();
 
-          if (isTestEmail || emailMatches) {
+          let admin = getIsAdmin();
+          try {
+            const me = await fetchAuthMe();
+            admin = me.isAdmin;
+            setIsAdmin(admin); // refresh the cache
+          } catch (e) {
+            console.warn('Could not refresh admin status:', e);
+          }
+          setIsAdminState(admin);
+
+          if (admin || emailMatches) {
             setAuthorized(true);
 
             // Load the AI-generated content to prefill its fields
@@ -197,11 +211,6 @@ export default function FacultyEditPage() {
           </div>
           <p style={{ marginBottom: '2rem', color: 'var(--ucsb-body-text)', lineHeight: '1.6' }}>
             You can only edit your own profile. The email you signed in with ({userEmail}) does not match this profile&apos;s email ({faculty.email}).
-            {userEmail?.toLowerCase() === 'brian_kim@ucsb.edu' && (
-              <span style={{ display: 'block', marginTop: '0.5rem', color: 'var(--ucsb-aqua)', fontWeight: 600 }}>
-                Note: brian_kim@ucsb.edu has test access to edit any profile.
-              </span>
-            )}
           </p>
           <Link href={`/faculty/${id}`} style={{
             color: 'var(--ucsb-navy)',
@@ -278,7 +287,7 @@ export default function FacultyEditPage() {
           Edit Profile: {faculty.name}
         </h1>
 
-        {userEmail?.toLowerCase() === 'brian_kim@ucsb.edu' && (
+        {isAdmin && (
           <div style={{
             background: '#fff3cd',
             border: '1px solid #ffc107',
@@ -287,7 +296,7 @@ export default function FacultyEditPage() {
             marginBottom: '1.5rem',
           }}>
             <p style={{ fontSize: '14px', color: '#856404', margin: 0, fontWeight: 600 }}>
-              🧪 TEST MODE: You have admin access to edit any profile
+              🛡️ Admin access: you can edit any faculty profile
             </p>
           </div>
         )}

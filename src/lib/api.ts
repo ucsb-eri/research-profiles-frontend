@@ -13,6 +13,22 @@ const API_BASE_URL =
 const API_BASE = `${API_BASE_URL}/api/faculty`;
 const API_SUMMARY_BASE = `${API_BASE_URL}/api/faculty-summaries`;
 
+export interface AuthMe {
+  email: string;
+  isAdmin: boolean;
+}
+
+// Resolve the signed-in identity from the backend: the verified @ucsb.edu email
+// and whether they're a site admin (admins may edit any profile). The backend
+// verifies the Bearer token server-side; requires a valid session.
+export async function fetchAuthMe(): Promise<AuthMe> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    headers: { 'Authorization': `Bearer ${getAccessToken() ?? ''}` },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
 // Unified fuzzy, typo-tolerant search. Hits the backend's pg_trgm-powered
 // /api/faculty/search endpoint, which ranks matches across name, topics,
 // research areas, department, summaries, and keywords. Returns [] on no match.

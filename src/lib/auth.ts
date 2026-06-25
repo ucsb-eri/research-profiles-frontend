@@ -28,6 +28,25 @@ export function getAccessToken(): string | null {
 }
 
 /**
+ * Whether the signed-in user is a site admin (may edit any profile). Cached in
+ * localStorage at login from GET /api/auth/me. This only drives which edit
+ * controls are shown — the backend independently authorizes every write, so a
+ * stale/forged flag can't actually grant edit access.
+ */
+export function getIsAdmin(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('is_admin') === 'true';
+}
+
+/**
+ * Cache the admin flag (call after resolving it from /api/auth/me).
+ */
+export function setIsAdmin(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('is_admin', value ? 'true' : 'false');
+}
+
+/**
  * Epoch-ms time the Google access token expires (stored at login), or null.
  */
 export function getTokenExpiry(): number | null {
@@ -45,6 +64,7 @@ export function clearAuth(): void {
   localStorage.removeItem('user_name');
   localStorage.removeItem('access_token');
   localStorage.removeItem('token_expiry');
+  localStorage.removeItem('is_admin');
 }
 
 /**

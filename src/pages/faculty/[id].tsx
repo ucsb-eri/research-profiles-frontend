@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { fetchFacultyById, fetchFacultySummaryTextById, fetchFacultyKeywordsById, fetchFacultyBroadKeywordsById } from '../../lib/api';
-import { getUserEmail, isAuthenticated, logout } from '../../lib/auth';
+import { getUserEmail, isAuthenticated, logout, getIsAdmin } from '../../lib/auth';
 import Link from 'next/link';
 
 interface FacultyDetail {
@@ -37,6 +37,8 @@ export default function FacultyDetailPage() {
   // Computed after mount (reads localStorage) to avoid SSR/hydration mismatch.
   const [isOwner, setIsOwner] = useState(false);
   const [authed, setAuthed] = useState(false);
+  // Site admins may edit any profile (cached at login from /api/auth/me).
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (id && typeof id === 'string') {
@@ -52,6 +54,7 @@ export default function FacultyDetailPage() {
   useEffect(() => {
     const email = getUserEmail();
     setAuthed(isAuthenticated());
+    setIsAdmin(getIsAdmin());
     setIsOwner(
       !!email && !!faculty?.email && email.toLowerCase() === faculty.email.toLowerCase()
     );
@@ -726,10 +729,24 @@ export default function FacultyDetailPage() {
               margin: '1.5rem 0',
             }} />
 
-            {/* Owner: edit link + sign out. Otherwise: sign in to edit. */}
+            {/* Owner or admin: edit link + sign out. Otherwise: sign in to edit. */}
             <div>
-              {isOwner ? (
+              {(isOwner || isAdmin) ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {isAdmin && !isOwner && (
+                    <span style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#856404',
+                      background: '#fff3cd',
+                      border: '1px solid #ffc107',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.6rem',
+                      alignSelf: 'flex-start',
+                    }}>
+                      🛡️ Admin
+                    </span>
+                  )}
                   <Link
                     href={`/faculty/${faculty.id}/edit`}
                     style={{
@@ -743,7 +760,7 @@ export default function FacultyDetailPage() {
                       gap: '0.5rem',
                     }}
                   >
-                    Edit your profile
+                    {isOwner ? 'Edit your profile' : 'Edit this profile'}
                     <span style={{ fontSize: '12px' }}>▶</span>
                   </Link>
                   <a
