@@ -9,6 +9,7 @@ import {
   fetchFacultyBroadKeywordsById,
   resetFacultySummaryToAI,
   fetchAuthMe,
+  uploadFacultyPhoto,
 } from '../../../lib/api';
 import { getUserEmail, isSessionValid, clearAuth, loginWithGoogle, getIsAdmin, setIsAdmin } from '../../../lib/auth';
 import Link from 'next/link';
@@ -40,6 +41,11 @@ export default function FacultyEditPage() {
   // authorize editing profiles they don't own, and to show the admin banner.
   const [isAdmin, setIsAdminState] = useState(false);
   
+  // Photo upload state (the file upload runs immediately on selection, separate
+  // from the main form save).
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     specialization: '',
@@ -48,6 +54,7 @@ export default function FacultyEditPage() {
     office: '',
     website: '',
     profile_url: '',
+    photo_url: '',
     // AI-generated content
     summary: '',
     keywords: '',        // comma-separated in the UI
@@ -134,6 +141,7 @@ export default function FacultyEditPage() {
               office: facultyData.office || '',
               website: facultyData.website || '',
               profile_url: facultyData.profile_url || '',
+              photo_url: facultyData.photo_url || '',
               summary: summaryRes?.summary || '',
               keywords: Array.isArray(keywordsRes?.keywords) ? keywordsRes.keywords.join(', ') : '',
               broad_keywords: Array.isArray(broadRes?.broad_keywords) ? broadRes.broad_keywords.join(', ') : '',
@@ -148,6 +156,30 @@ export default function FacultyEditPage() {
       })();
     }
   }, [id, router.query]);
+
+  // Upload a chosen image file immediately. On success the backend has already
+  // saved photo_url, so we just reflect the new URL in the form/preview.
+  const handlePhotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !faculty) return;
+    setPhotoError(null);
+    setPhotoUploading(true);
+    try {
+      const updated = await uploadFacultyPhoto(faculty.id, file);
+      setFormData(prev => ({ ...prev, photo_url: updated?.photo_url || prev.photo_url }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      if (/401/.test(msg) || /token/i.test(msg)) {
+        setSessionExpired(true);
+        setPhotoError('Your session expired.');
+      } else {
+        setPhotoError(msg);
+      }
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = ''; // let the same file be re-selected if needed
+    }
+  };
 
   const handleResetToAI = async () => {
     if (!faculty) return;
@@ -377,6 +409,7 @@ export default function FacultyEditPage() {
                 office?: string;
                 website?: string;
                 profile_url?: string;
+                photo_url?: string;
               } = {};
 
               if (formData.specialization.trim()) {
@@ -397,6 +430,8 @@ export default function FacultyEditPage() {
               if (formData.profile_url.trim()) {
                 updates.profile_url = formData.profile_url.trim();
               }
+              // Always send photo_url (even empty) so the user can clear a bad image.
+              updates.photo_url = formData.photo_url.trim();
 
               // Save profile fields (only if any were provided) and AI content.
               if (Object.keys(updates).length > 0) {
@@ -436,6 +471,102 @@ export default function FacultyEditPage() {
             marginBottom: '2rem',
           }}
         >
+          {/* Profile image: upload a file or paste an image URL. Upload saves
+              immediately; the URL field persists on Save. */}
+          <div style={{ marginBottom: '2rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '16px',
+              fontWeight: 700,
+              color: 'var(--ucsb-navy)',
+              marginBottom: '0.5rem',
+              fontFamily: 'Nunito Sans, sans-serif',
+            }}>
+              Profile Image
+            </label>
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              {/* Live preview */}
+              <div style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, var(--ucsb-aqua) 0%, var(--ucsb-navy) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '40px',
+                fontWeight: 'bold',
+                fontFamily: 'Nunito Sans, sans-serif',
+                flexShrink: 0,
+                border: '1px solid #ddd',
+              }}>
+                {formData.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={formData.photo_url}
+                    alt={faculty.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  faculty.name.split(' ').map(n => n[0]).join('').toUpperCase()
+                )}
+              </div>
+
+              {/* Controls */}
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handlePhotoFile}
+                  disabled={photoUploading}
+                  style={{
+                    fontSize: '14px',
+                    fontFamily: 'Nunito Sans, sans-serif',
+                    marginBottom: '0.5rem',
+                    display: 'block',
+                  }}
+                />
+                <p style={{ fontSize: '12px', color: 'var(--ucsb-body-text)', margin: '0 0 0.75rem 0' }}>
+                  {photoUploading
+                    ? 'Uploading…'
+                    : 'JPEG, PNG, WebP, or GIF — up to 5MB. Uploads save immediately.'}
+                </p>
+                {photoError && (
+                  <p style={{ fontSize: '13px', color: '#721c24', margin: '0 0 0.75rem 0', fontWeight: 600 }}>
+                    ✗ {photoError}
+                  </p>
+                )}
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: 'var(--ucsb-navy)',
+                  marginBottom: '0.25rem',
+                  fontFamily: 'Nunito Sans, sans-serif',
+                }}>
+                  …or paste an image URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.photo_url}
+                  onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
+                  placeholder="https://example.com/photo.jpg"
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    fontSize: '14px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontFamily: 'Nunito Sans, sans-serif',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{
               display: 'block',

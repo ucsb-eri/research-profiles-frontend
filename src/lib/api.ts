@@ -244,6 +244,7 @@ export async function updateFaculty(
     website?: string;
     email?: string;
     profile_url?: string;
+    photo_url?: string;
   },
   userEmail: string
 ) {
@@ -360,6 +361,29 @@ export async function updateFaculty(
     }
     throw new Error(`Failed to update faculty: ${String(error)}`);
   }
+}
+
+// Upload a new profile image (owner or admin; backend verifies the Bearer token
+// and ownership/admin). Sends multipart/form-data with the file under field
+// `photo`; the backend stores it, sets photo_url, and returns the updated row.
+// Don't set Content-Type — the browser adds the multipart boundary itself.
+export async function uploadFacultyPhoto(id: number, file: File) {
+  const form = new FormData();
+  form.append('photo', file);
+  const res = await fetch(`${API_BASE}/${id}/photo`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${getAccessToken() ?? ''}` },
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `HTTP ${res.status}: ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch { /* non-JSON error body */ }
+    throw new Error(message);
+  }
+  return res.json(); // updated faculty (includes the new photo_url)
 }
 
 // Get all available departments
